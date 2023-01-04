@@ -23,7 +23,7 @@ library(ggthemes)
 
 options(scipen=999)
 
-data <- read_sav("2022Ensanut2018.sav")
+data <- read_sav(url("https://www.dropbox.com/s/550t3sjrs1r1u57/2022Ensanut2018.sav?dl=1"))
 
 data <- data %>%
   rename_with(., .fn = tolower)
@@ -164,8 +164,6 @@ results %>%
   labs(y = "")
 
 
-
-
-  
+ggsave("forestplot.pdf", width = 9, height = 6, device = "pdf", units = "in", dpi = 1800)
 
 ```
