@@ -19,24 +19,14 @@ library(skimr)
 library(Amelia)
 library(survey)
 library(srvyr)
-library(doParallel)
-
-no_cores <- detectCores() - 1  
-registerDoParallel(cores = no_cores)
-options(cores = no_cores)
-getDoParWorkers()                   
-getDoParName()
 
 options(scipen=999)
 
 data <- read_sav("2022Ensanut2018.sav")
-data.csv <- read_csv("CS_ADULTOS.csv")
 
 data <- data %>%
   rename_with(., .fn = tolower)
 
-data.csv <- data.csv %>%
-  rename_with(., .fn = tolower)
 
 ```
 
@@ -49,9 +39,6 @@ grep("est", value = T, names(data))
 ```
 
 ```{r, survey design}
-data %>%
-  group_by(estrato, ses) %>%
-  count()
 
 ### some variable recoding
 data <- data %>%
@@ -71,12 +58,6 @@ data <- data %>%
 
 ### setting the complex sample survey design object
 design.ensanut <- data %>%
-  as_survey_design(strata = est_dis, 
-                   ids = upm_dis, 
-                   weights = f_20mas, 
-                   nest = T)
-
-design.ensanut2 <- data.csv %>%
   as_survey_design(strata = est_dis, 
                    ids = upm_dis, 
                    weights = f_20mas, 
