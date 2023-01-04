@@ -66,7 +66,7 @@ design.ensanut <- data %>%
 
 ```
 
-```{r, }
+```{r, univariate logistic regression}
 ### saving the predictors names in a vector
 myvars <- c("sexo", "urbanicity", "age_cat", "region", "ses", "hta", "diabetes")
 
@@ -96,6 +96,7 @@ for(i in seq_along(myvars)){
   
 }
 
+### reference values
 ref_levels <- tibble(term = c("Men", "Urban", "20 - 39 yo", 
                               "North", "High", "No Hypertension", 
                               "No Diabetes"), 
@@ -104,7 +105,7 @@ ref_levels <- tibble(term = c("Men", "Urban", "20 - 39 yo",
                      conf.high = rep(NA, 7),
                      p.value = rep(NA, 7))
 
-
+### bind list of results with reference values
 results <- ref_levels[1, ] %>%
   bind_rows(mylist[[1]]) %>%
   bind_rows(ref_levels[2, ]) %>%
@@ -120,6 +121,7 @@ results <- ref_levels[1, ] %>%
   bind_rows(ref_levels[7, ]) %>%
   bind_rows(mylist[[7]])
   
+### some recoding
 results <- results %>%
   mutate(term = str_replace(term, "sexoWomen", "Women"), 
          term = str_replace(term, "urbanicityRural", "Rural"), 
@@ -134,13 +136,15 @@ results <- results %>%
          term = str_replace(term, "htaYes Hypertension", "Yes Hypertension"), 
          term = str_replace(term, "diabetesYes Diabetes", "Yes Diabetes"))
 
+results$term[results$term == "age_cat60+ yo"] <- "60+ yo"
+
+
+### save results as CSV
 write.csv(results, "results.csv") 
 
 ```
 
 ```{r, forestplot}
-results$term[results$term == "age_cat60+ yo"] <- "60+ yo"
-
 
 results %>%
   mutate(term =  factor(term), 
