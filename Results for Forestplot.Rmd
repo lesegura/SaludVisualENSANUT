@@ -45,15 +45,15 @@ data <- left_join(data, hogar.res, by = c("upm", "viv_sel", "hogar", "numren"))
 ```
 
 ```{r, exploration}
-skim(data)
-
-grep("f_20", value = T, names(data))
-grep("viv", value = T, names(data))
-grep("num", value = T, names(hogar.res))
-
-data %>%
-  group_by(nivel) %>%
-  count()
+# skim(data)
+# 
+# grep("f_20", value = T, names(data))
+# grep("viv", value = T, names(data))
+# grep("num", value = T, names(hogar.res))
+# 
+# data %>%
+#   group_by(nivel) %>%
+#   count()
 
 ```
 
@@ -196,12 +196,14 @@ results %>%
   scale_x_continuous(limits = c(0.7, 10.00), breaks= seq(0.70, 10.0, 0.30), name = "Odds Ratio")  +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   theme_calc() +
-  theme(legend.position = "left", 
-        legend.title = element_blank()) +
+  theme(legend.position = "right", 
+        legend.title = element_blank(), 
+        plot.title = element_text(size = 14)) +
   labs(y = "", 
        title = "Figure 1. Predictors of Severe Visual Impairment among the Mexican population.")
 
 
-ggsave("forestplot.pdf", width = 9, height = 6, device = "pdf", units = "in", dpi = 1800)
+ggsave("forestplot.pdf", width = 11, height = 6, device = "pdf", units = "in", dpi = 1800)
+ggsave("forestplot.jpeg", width = 11, height = 6, units = "in", dpi = 1800)
 
 ```
