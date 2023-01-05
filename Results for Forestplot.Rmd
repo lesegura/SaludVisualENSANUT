@@ -25,8 +25,21 @@ options(scipen=999)
 
 data <- read_sav(url("https://www.dropbox.com/s/550t3sjrs1r1u57/2022Ensanut2018.sav?dl=1"))
 
+hogar.res <- read_sav(url("https://www.dropbox.com/s/sqc0ezxg7wvbm8m/CS_RESIDENTES.sav?dl=1"))
+
 data <- data %>%
   rename_with(., .fn = tolower)
+
+hogar.res <- hogar.res %>%
+  rename_with(., .fn = tolower) %>%
+  select(upm, viv_sel, hogar, numren, nivel) %>%
+  mutate(upm = as.numeric(upm), 
+         viv_sel = as.numeric(viv_sel), 
+         hogar = as.numeric(hogar), 
+         numren = as.numeric(numren))
+
+
+data <- left_join(data, hogar.res, by = c("upm", "viv_sel", "hogar", "numren"))
 
 
 ```
@@ -35,7 +48,12 @@ data <- data %>%
 skim(data)
 
 grep("f_20", value = T, names(data))
-grep("est", value = T, names(data))
+grep("viv", value = T, names(data))
+grep("num", value = T, names(hogar.res))
+
+data %>%
+  group_by(nivel) %>%
+  count()
 
 ```
 
@@ -53,9 +71,18 @@ data <- data %>%
          ses = factor(case_when(estrato == 1 ~ 4, 
                          estrato == 2 ~ 3, 
                          estrato == 3 ~ 2, 
-                         estrato == 4 ~ 1), labels = c("High", "Middle High", "Middle Low", "Low")),
-         hta = factor(ifelse(p4_1 == 2, 0, p4_1), labels = c("No Hypertension", "Yes Hypertension")), 
-         diabetes = factor(ifelse(p3_1 > 1, 0, p3_1), labels = c("No Diabetes", "Yes Diabetes")))
+                         estrato == 4 ~ 1), labels = c("High", "Middle high", "Middle low", "Low")),
+         hta = factor(ifelse(p4_1 == 2, 0, p4_1), labels = c("No hypertension", "Yes hypertension")), 
+         diabetes = factor(ifelse(p3_1 > 1, 0, p3_1), labels = c("No diabetes", "Yes diabetes")), 
+         nivel = as.integer(factor(nivel)),
+         education = factor(case_when(nivel < 3 ~ 4, 
+                                      nivel == 3 ~ 3, 
+                                      nivel == 4 ~ 2, 
+                                      nivel > 4 ~ 1), 
+                            labels = c("More than high school education", 
+                                       "High school education","Secondary school", 
+                                       "Elementary education or lower")))
+
 
 ### setting the complex sample survey design object
 design.ensanut <- data %>%
@@ -68,7 +95,7 @@ design.ensanut <- data %>%
 
 ```{r, univariate logistic regression}
 ### saving the predictors names in a vector
-myvars <- c("sexo", "urbanicity", "age_cat", "region", "ses", "hta", "diabetes")
+myvars <- c("sexo", "urbanicity", "age_cat", "education", "region", "ses", "hta", "diabetes")
 
 ### function to run a univariate logistic regression 
 myfun <- function(x) {
@@ -97,13 +124,13 @@ for(i in seq_along(myvars)){
 }
 
 ### reference values
-ref_levels <- tibble(term = c("Men", "Urban", "20 - 39 yo", 
-                              "North", "High", "No Hypertension", 
-                              "No Diabetes"), 
-                     OR = rep(1.00, 7), 
-                     conf.low = rep(NA, 7), 
-                     conf.high = rep(NA, 7),
-                     p.value = rep(NA, 7))
+ref_levels <- tibble(term = c("Men", "Urban", "20 - 39 yo", "More than high school", 
+                              "North", "High", "No hypertension", 
+                              "No diabetes"), 
+                     OR = rep(1.00, 8), 
+                     conf.low = rep(NA, 8), 
+                     conf.high = rep(NA, 8),
+                     p.value = rep(NA, 8))
 
 ### bind list of results with reference values
 results <- ref_levels[1, ] %>%
@@ -119,7 +146,9 @@ results <- ref_levels[1, ] %>%
   bind_rows(ref_levels[6, ]) %>%
   bind_rows(mylist[[6]]) %>%
   bind_rows(ref_levels[7, ]) %>%
-  bind_rows(mylist[[7]])
+  bind_rows(mylist[[7]]) %>%
+  bind_rows(ref_levels[8, ]) %>%
+  bind_rows(mylist[[8]])
   
 ### some recoding
 results <- results %>%
@@ -127,14 +156,18 @@ results <- results %>%
          term = str_replace(term, "urbanicityRural", "Rural"), 
          term = str_replace(term, "age_cat40 - 59 yo", "40 - 50 yo"), 
          term = str_replace(term, "age_cat60+ yo", "60 and older"), 
+         term = str_replace(term, "educationHigh school education", "High school education"), 
+         term = str_replace(term, "educationSecondary school", "Secondary school"), 
+         term = str_replace(term, "educationElementary education or lower", 
+                            "Elementary education or lower"),
          term = str_replace(term, "regionCenter", "Center"), 
          term = str_replace(term, "regionMexico City", "Mexico City"),
          term = str_replace(term, "regionSouth", "South"),
-         term = str_replace(term, "sesMiddle High", "Middle High"), 
-         term = str_replace(term, "sesMiddle Low", "Middle Low"), 
+         term = str_replace(term, "sesMiddle high", "Middle high"), 
+         term = str_replace(term, "sesMiddle low", "Middle low"), 
          term = str_replace(term, "sesLow", "Low"), 
-         term = str_replace(term, "htaYes Hypertension", "Yes Hypertension"), 
-         term = str_replace(term, "diabetesYes Diabetes", "Yes Diabetes"))
+         term = str_replace(term, "htaYes hypertension", "Yes hypertension"), 
+         term = str_replace(term, "diabetesYes diabetes", "Yes diabetes"))
 
 results$term[results$term == "age_cat60+ yo"] <- "60+ yo"
 
@@ -151,11 +184,11 @@ results %>%
          conf.low = ifelse(is.na(conf.low), 1, conf.low), 
          conf.high = ifelse(is.na(conf.high), 1, conf.high), 
          p.value = ifelse(is.na(p.value), 1, p.value), 
-         orden = seq(1, 19, 1), 
-         color = factor(c(rep(1, 2), rep(2, 2), rep(3, 3), rep(4, 4), 
-                   rep(5, 4), rep(6, 2), rep(7, 2)), 
-                   labels = c("Sex", "Urbanicity", "Age group", 
-                              "Region", "SES", "HBP", "T2DM"))) %>%
+         orden = seq(1, 23, 1), 
+         color = factor(c(rep(1, 2), rep(2, 2), rep(3, 3), rep(4, 4), rep(5, 4), 
+                   rep(6, 4), rep(7, 2), rep(8, 2)), 
+                   labels = c("Sex", "Urbanicity", "Age group", "Education", 
+                              "Region", "Socioeconomic status", "High blood pressure", "T2DM"))) %>%
   ggplot(aes(y = reorder(ordered(term, levels = levels(term)), desc(orden)), 
              x = OR, xmin = conf.low, xmax = conf.high, color = color)) +
   geom_point(size = 5, shape = "diamond") +
@@ -165,7 +198,8 @@ results %>%
   theme_calc() +
   theme(legend.position = "left", 
         legend.title = element_blank()) +
-  labs(y = "")
+  labs(y = "", 
+       title = "Figure 1. Predictors of Severe Visual Impairment among the Mexican population.")
 
 
 ggsave("forestplot.pdf", width = 9, height = 6, device = "pdf", units = "in", dpi = 1800)
