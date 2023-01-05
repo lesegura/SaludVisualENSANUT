@@ -124,9 +124,10 @@ for(i in seq_along(myvars)){
 }
 
 ### reference values
-ref_levels <- tibble(term = c("Men", "Urban", "20 - 39 yo", "More than high school", 
-                              "North", "High", "No hypertension", 
-                              "No diabetes"), 
+ref_levels <- tibble(term = c("Men (Reference category)", "Urban (Reference category)", 
+                              "20 - 39 yo (Reference category)", "More than high school (Reference category)", 
+                              "North (Reference category)", "High (Reference category)", 
+                              "No hypertension (Reference category)", "No diabetes (Reference category)"), 
                      OR = rep(1.00, 8), 
                      conf.low = rep(NA, 8), 
                      conf.high = rep(NA, 8),
@@ -173,7 +174,7 @@ results$term[results$term == "age_cat60+ yo"] <- "60+ yo"
 
 
 ### save results as CSV
-write.csv(results, "results.csv") 
+# write.csv(results, "results.csv") 
 
 ```
 
@@ -203,7 +204,7 @@ results %>%
        title = "Figure 1. Predictors of Severe Visual Impairment among the Mexican population.")
 
 
-ggsave("forestplot.pdf", width = 11, height = 6, device = "pdf", units = "in", dpi = 1800)
-ggsave("forestplot.jpeg", width = 11, height = 6, units = "in", dpi = 1800)
+ggsave("forestplot.pdf", width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
+ggsave("forestplot.jpeg", width = 12, height = 6, units = "in", dpi = 1800)
 
 ```
