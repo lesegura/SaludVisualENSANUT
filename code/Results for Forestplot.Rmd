@@ -1,0 +1,211 @@
+---
+title: "Results for Forest Plot ENSANUT 2018"
+author: "Luis E Segura"
+date: "2023-01-04"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = FALSE, message = FALSE)
+options(tinytex.verbose = TRUE)
+
+rm(list = ls())
+
+library(tidyverse)
+library(haven)
+library(skimr)
+library(Amelia)
+library(survey)
+library(srvyr)
+library(ggthemes)
+
+options(scipen=999)
+
+data <- read_sav(url("https://www.dropbox.com/s/550t3sjrs1r1u57/2022Ensanut2018.sav?dl=1"))
+
+hogar.res <- read_sav(url("https://www.dropbox.com/s/sqc0ezxg7wvbm8m/CS_RESIDENTES.sav?dl=1"))
+
+data <- data %>%
+  rename_with(., .fn = tolower)
+
+hogar.res <- hogar.res %>%
+  rename_with(., .fn = tolower) %>%
+  select(upm, viv_sel, hogar, numren, nivel) %>%
+  mutate(upm = as.numeric(upm), 
+         viv_sel = as.numeric(viv_sel), 
+         hogar = as.numeric(hogar), 
+         numren = as.numeric(numren))
+
+
+data <- left_join(data, hogar.res, by = c("upm", "viv_sel", "hogar", "numren"))
+
+
+```
+
+```{r, exploration}
+# skim(data)
+# 
+# grep("f_20", value = T, names(data))
+# grep("viv", value = T, names(data))
+# grep("num", value = T, names(hogar.res))
+# 
+# data %>%
+#   group_by(nivel) %>%
+#   count()
+
+```
+
+```{r, survey design}
+
+### some variable recoding
+data <- data %>%
+  mutate(dv_bin.fct = factor(dv_bin, labels = c("No Visual Disability", "Yes Visual Disability")), 
+         sexo = factor(sexo, labels = c("Men", "Women")), 
+         urbanicity = factor(dominio, labels = c("Urban", "Rural")), 
+         age_cat = factor(ifelse(edad < 40, 1, 
+                          ifelse(edad > 39 & edad < 60, 2, 3)), 
+                          labels = c("20 - 39 yo", "40 - 59 yo", "60+ yo")), 
+         region = factor(region, labels = c("North", "Center", "Mexico City", "South")), 
+         ses = factor(case_when(estrato == 1 ~ 4, 
+                         estrato == 2 ~ 3, 
+                         estrato == 3 ~ 2, 
+                         estrato == 4 ~ 1), labels = c("High", "Middle high", "Middle low", "Low")),
+         hta = factor(ifelse(p4_1 == 2, 0, p4_1), labels = c("No hypertension", "Yes hypertension")), 
+         diabetes = factor(ifelse(p3_1 > 1, 0, p3_1), labels = c("No diabetes", "Yes diabetes")), 
+         nivel = as.integer(factor(nivel)),
+         education = factor(case_when(nivel < 3 ~ 4, 
+                                      nivel == 3 ~ 3, 
+                                      nivel == 4 ~ 2, 
+                                      nivel > 4 ~ 1), 
+                            labels = c("More than high school education", 
+                                       "High school education","Secondary school", 
+                                       "Elementary education or lower")))
+
+
+### setting the complex sample survey design object
+design.ensanut <- data %>%
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+
+```
+
+```{r, univariate logistic regression}
+### saving the predictors names in a vector
+myvars <- c("sexo", "urbanicity", "age_cat", "education", "region", "ses", "hta", "diabetes")
+
+### function to run a univariate logistic regression 
+myfun <- function(x) {
+  require(tidyverse)
+  require(survey)
+  require(srvyr)
+  
+  svyglm(as.formula(paste("dv_bin.fct ~", x)), design = design.ensanut, 
+         family = quasibinomial(link = "logit")) %>%
+    broom::tidy(exponentiate = T, conf.int = T) %>%
+    filter(term !="(Intercept)") %>%
+    rename(OR = estimate) %>%
+    select(term, OR, conf.low, conf.high, p.value) %>%
+    mutate_if(is.numeric, round, 2)
+    
+}
+
+### create an empty list
+mylist <- vector(mode = "list", length = length(myvars))
+
+
+### loop to run the logistic regression on each correlate in myvars and save results into a list
+for(i in seq_along(myvars)){
+  mylist[[i]] <- myfun(myvars[i])
+  
+}
+
+### reference values
+ref_levels <- tibble(term = c("Men (Reference category)", "Urban (Reference category)", 
+                              "20 - 39 yo (Reference category)", "More than high school (Reference category)", 
+                              "North (Reference category)", "High (Reference category)", 
+                              "No hypertension (Reference category)", "No diabetes (Reference category)"), 
+                     OR = rep(1.00, 8), 
+                     conf.low = rep(NA, 8), 
+                     conf.high = rep(NA, 8),
+                     p.value = rep(NA, 8))
+
+### bind list of results with reference values
+results <- ref_levels[1, ] %>%
+  bind_rows(mylist[[1]]) %>%
+  bind_rows(ref_levels[2, ]) %>%
+  bind_rows(mylist[[2]]) %>%
+  bind_rows(ref_levels[3, ]) %>%
+  bind_rows(mylist[[3]]) %>%
+  bind_rows(ref_levels[4, ]) %>%
+  bind_rows(mylist[[4]]) %>%
+  bind_rows(ref_levels[5, ]) %>%
+  bind_rows(mylist[[5]]) %>%
+  bind_rows(ref_levels[6, ]) %>%
+  bind_rows(mylist[[6]]) %>%
+  bind_rows(ref_levels[7, ]) %>%
+  bind_rows(mylist[[7]]) %>%
+  bind_rows(ref_levels[8, ]) %>%
+  bind_rows(mylist[[8]])
+  
+### some recoding
+results <- results %>%
+  mutate(term = str_replace(term, "sexoWomen", "Women"), 
+         term = str_replace(term, "urbanicityRural", "Rural"), 
+         term = str_replace(term, "age_cat40 - 59 yo", "40 - 50 yo"), 
+         term = str_replace(term, "age_cat60+ yo", "60 and older"), 
+         term = str_replace(term, "educationHigh school education", "High school education"), 
+         term = str_replace(term, "educationSecondary school", "Secondary school"), 
+         term = str_replace(term, "educationElementary education or lower", 
+                            "Elementary education or lower"),
+         term = str_replace(term, "regionCenter", "Center"), 
+         term = str_replace(term, "regionMexico City", "Mexico City"),
+         term = str_replace(term, "regionSouth", "South"),
+         term = str_replace(term, "sesMiddle high", "Middle high"), 
+         term = str_replace(term, "sesMiddle low", "Middle low"), 
+         term = str_replace(term, "sesLow", "Low"), 
+         term = str_replace(term, "htaYes hypertension", "Yes hypertension"), 
+         term = str_replace(term, "diabetesYes diabetes", "Yes diabetes"))
+
+results$term[results$term == "age_cat60+ yo"] <- "60+ yo"
+
+
+### save results as CSV
+# write.csv(results, "results.csv") 
+
+```
+
+```{r, forestplot}
+
+results %>%
+  mutate(term =  factor(term), 
+         conf.low = ifelse(is.na(conf.low), 1, conf.low), 
+         conf.high = ifelse(is.na(conf.high), 1, conf.high), 
+         p.value = ifelse(is.na(p.value), 1, p.value), 
+         orden = seq(1, 23, 1), 
+         color = factor(c(rep(1, 2), rep(2, 2), rep(3, 3), rep(4, 4), rep(5, 4), 
+                   rep(6, 4), rep(7, 2), rep(8, 2)), 
+                   labels = c("Sex", "Urbanicity", "Age group", "Education", 
+                              "Region", "Socioeconomic status", "High blood pressure", "T2DM"))) %>%
+  ggplot(aes(y = reorder(ordered(term, levels = levels(term)), desc(orden)), 
+             x = OR, xmin = conf.low, xmax = conf.high, color = color)) +
+  geom_point(size = 5, shape = "diamond") +
+  geom_errorbarh(height = 0.3) + 
+  scale_x_continuous(limits = c(0.7, 10.00), breaks = c(0.7, seq(1.0, 10.0, 1.0)), name = "Odds Ratio")  +
+  geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
+  theme_calc() +
+  theme(legend.position = "right", 
+        legend.title = element_blank(), 
+        plot.title = element_text(size = 14), 
+        text = element_text(size = 12)) +
+  labs(y = "", 
+       title = "Figure 1. Predictors of Severe Visual Impairment among the Mexican population.")
+
+
+ggsave("forestplot.pdf", width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
+ggsave("forestplot.jpeg", width = 12, height = 6, units = "in", dpi = 1800)
+
+```

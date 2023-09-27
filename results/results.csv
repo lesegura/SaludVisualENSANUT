@@ -1,0 +1,24 @@
+"","term","OR","conf.low","conf.high","p.value"
+"1","Men",1,NA,NA,NA
+"2","Women",1.15,0.97,1.36,0.11
+"3","Urban",1,NA,NA,NA
+"4","Rural",1.26,1.07,1.49,0.01
+"5","20 - 39 yo",1,NA,NA,NA
+"6","40 - 50 yo",2.26,1.75,2.91,0
+"7","60+ yo",7.81,6.11,9.97,0
+"8","More than high school",1,NA,NA,NA
+"9","High school education",1.45,1.09,1.92,0.01
+"10","Secondary school",3.55,2.77,4.56,0
+"11","Elementary education or lower",7.2,5.44,9.53,0
+"12","North",1,NA,NA,NA
+"13","Center",0.9,0.73,1.12,0.34
+"14","Mexico City",1.09,0.77,1.55,0.62
+"15","South",1.16,0.96,1.4,0.12
+"16","High",1,NA,NA,NA
+"17","Middle high",1.73,0.99,3.02,0.05
+"18","Middle low",1.8,1.06,3.08,0.03
+"19","Low",2.07,1.2,3.56,0.01
+"20","No hypertension",1,NA,NA,NA
+"21","Yes hypertension",2.96,2.49,3.52,0
+"22","No diabetes",1,NA,NA,NA
+"23","Yes diabetes",3.84,3.18,4.65,0

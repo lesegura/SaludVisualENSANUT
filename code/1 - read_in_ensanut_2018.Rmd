@@ -1,0 +1,42 @@
+---
+title: "1 - Read in ENSANUT"
+author: "Luis E Segura"
+date: "2023-09-27"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "tidymodels", "survey", "srvyr", "haven")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+```
+
+Importando archivos de adultos y hogares ENSANUT 2018
+```{r}
+adultos <- read_sav(here("data/", "2022Ensanut2018.sav")) |>
+  janitor::clean_names()
+
+hogares <- read_sav(here("data/", "CS_RESIDENTES.sav")) |>
+  janitor::clean_names()
+
+hogares <- hogares |> 
+  mutate(upm = as.numeric(upm), 
+         viv_sel = as.numeric(viv_sel), 
+         hogar = as.numeric(hogar), 
+         numren = as.numeric(numren))
+```
+
+Uniendo archivo de hogares y adultos usando las variables upm, viv_sel, hogar y numren. Guardamos la base de datos entera como ensanut18_all.RData
+```{r}
+ensanut18_all <- left_join(adultos, hogares, by = c("upm", "viv_sel", "hogar", "numren"))
+
+save(ensanut18_all, file = here("data/", "ensanut18_all.RData"))
+```
+
