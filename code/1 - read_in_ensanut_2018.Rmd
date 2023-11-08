@@ -18,19 +18,214 @@ for (package in mypckgs) {
 
 ```
 
-Importando archivos de adultos y hogares ENSANUT 2018
+Importando archivos de base de datos salud adultos ENSANUT 2018
+
 ```{r}
-adultos <- read_sav(here("data/", "2022Ensanut2018.sav")) |>
+adultos <- read_sav(here("data/", "CS_ADULTOS.sav")) |>
   janitor::clean_names()
 
-hogares <- read_sav(here("data/", "CS_RESIDENTES.sav")) |>
-  janitor::clean_names()
+grep("p11_8", names(adultos), value = T)
 
-hogares <- hogares |> 
+adultos |>
+  group_by(p11_1) |>
+  count()
+
+adultos |>
+  filter(!is.na(p3_7_8)) |>
+  group_by(p3_7_8) |>
+  summarise(n = n()) |>
+  mutate(prop = n / sum(n))
+
+design.ensanut <- adultos %>%
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+
+design.ensanut |>
+  mutate(dv = ifelse(p14_3 %in% c(1, 2), 0, 1)) |>
+  filter(p11_1 == 1) |>
+  group_by(dv, p11_8) |>
+  summarise(prop = survey_prop(), 
+            n = survey_total())
+
+design.ensanut |>
+  mutate(p3_7_8 = ifelse(p3_7_8 == 2, 0, 
+                         ifelse(p3_7_8 == 9, NA, p3_7_8)), 
+         p3_6_r = case_when(p3_6 %in% c("01", "02") ~ "IMSS", 
+                          p3_6 %in% c("03", "04", "11") ~ "SS", 
+                          p3_6 %in% c("05") ~ "DIF y CR", 
+                          p3_6 %in% c("06", "07") ~ "ISSSTE", 
+                          p3_6 == "08" ~ "Marina, Defensa, PEMEX", 
+                          p3_6 == "09" ~ "Privado", 
+                          p3_6 == "10" ~ "Hospital Civil", 
+                          p3_6 == "12" ~ "Consultorios de Farmacias", 
+                          p3_6 %in% c("13", "14") ~ "Otras")) |>
+  group_by(p3_6_r) |>
+  summarise(n = n(), 
+            prop = survey_mean(p3_7_8, na.rm = T)) |>
+  mutate(prop = prop * 100) |>
+  arrange(desc(prop))
+
+```
+Variables que vamos a seleccionar
+
+Base de datos Salud Adultos
+
+- est_dis: estrato
+- upm_dis: unidad primaria muestreal
+- f_20mas: factor ponderador
+- sexo: 1 = Hombre; 2 = Mujer
+- edad: continua
+- region: 1 = Norte; 2 = Centro; 3 = CDMX; 4 = Sur
+- estrato: 1 = Bajo, Medio bajo, Medio alto, Alto
+- dominio: 1 = Urbano, 2 = Rural
+- p3_1: 1 = Si diabetes, 2 = Si, diabetes gestacional, 3 = No. Recodificar 1 y 2-3 = 0.
+
+- p3_6: la ultima ocasion checar diabetes, donde se atendio:
+    - "01" [IMSS Prospera]  y "02" [IMSS]  = 1
+    - "03" [Secretaría de Salud]; "04" [Seguro Popular (SSA)]; "11" [Institutos nacionales]  = 2
+    - "05" [DIF, Cruz Roja, INI] = 3
+    - "06" [ISSSTE] y "07" [ISSSTE Estatal] = 4
+    - "08" [Marina, Defensa, Pemex] = 5
+    - "09" [Consultorio, clínica u hospital privado] = 6
+    - "10" [Hospital civil] 
+    - "12" [Consultorios dependientes de farmacias]
+    - "13" [Otra institución] y "14" [Ninguna]
+    
+- p3_7_8: ¿le solicitó que acudiera a revisión de la vista? 1 = Si, 2 = No, 9 = NS
+
+- p3_18_3: debido a la diabetes le ha disminuido la visión?
+
+- p3_18_4: debido a la diabetes ha perdido la vista?
+
+- p4_1: 1 = Si hipertension (dx por medico), 2 = No hipertension, 
+
+- p4_10_1: ¿Debido a la hipertensión… ha sufrido daño en la retina?
+
+¿Usa anteojos o lentes de contacto? Incluya el uso de anteojos para leer.
+
+- p14_1: 1 = Si, 2 = No
+
+Cuando usa anteojos o lentes de contacto, ¿tiene dificultad para ver?
+
+- p14_3: 1 = Ninguna dificultad, 2 = cierta dificultad, 3 = Mucha dificultad, 4 = Le resulta imposible ver
+
+Sintomatología depresiva durante la ultima semana. Respuestas posibles 1 = rara vez o nunca (menos de un dia), 2 = pocas veces o alguna vez (1-2 dias), 3 = un numero de veces considerable (3-4 dias), 4 = todo el tiempo o la mayoria del tiempo (5-7 dias). El puntaje de cada indicador va de 0 a 3. Score para sintomas depresivos basados en el CESD-7 con punto de corta de 9 o mas y 5 o mas para adultos mayores (60 o mas). El 6to indicador debe invertirse. 
+
+- p2_1_1: ¿sentía como si no pudiera quitarse de encima la tristeza?
+- p2_1_2: ¿le costaba concentrarse en lo que estaba haciendo?
+- p2_1_3: ¿se sintió deprimido(a)?
+- p2_1_4: ¿le parecía que todo lo que hacía era un esfuerzo?
+- p2_1_5: ¿no durmió bien?
+- p2_1_6: ¿disfrutó de la vida?
+- p2_1_7: ¿se sintió triste?
+
+FAlTAN: obesidad (p1_1), enf. cardiovasular (p5_2_1:p5_2_3), enf. renal cronica (p6_1_3), dislipidemias (p6_4 y p6_6), tabaquismo (diario), alcoholismo (binge).
+
+Tabaquismo:
+
+- p13_1
+- p13_2
+- p13_3
+- p13_4
+- p13_5
+- p13_6
+- p13_6_1
+- p13_6_2
+
+Alcoholismo:
+
+- p13_11, p13_14, p13_15. Primera para si/no,ultimas para binge
+
+DV por accidente - p11_8
+
+Importando archivos de base de datos residentes ENSANUT 2018
+
+```{r}
+residentes <- read_sav(here("data/", "CS_RESIDENTES.sav")) |>
+  janitor::clean_names()
+```
+
+Base de datos de Residentes:
+
+- nivel: 00 = Ninguno, 01 = Preescolar, 02 = Primaria, 03 = Secundaria, 04 = Preparatoria o bachillerato, 
+         05 = Normal basica, 06 = Estudios tecnicos o comerciales con primaria terminada, 
+         07 = Estudios tecnicos o comerciales con secundaria terminada, 
+         08 = Estudios tecnicos o comerciales con preparatoria terminada, 
+         09 = Normal de licenciatura, 
+         10 = Licenciatura o profesional
+         11 = Maestria
+         12 = Doctorado
+- p3_9_01: 0 = No, 1 = Se atiende en IMSS
+- p3_9_02: 0 = No, 1 = Se atiende en ISSSTE
+- p3_9_03: 0 = No, 1 = Se atiende en ISSSTE Estatal
+- p3_9_04: 0 = No, 1 = Se atiende en PEMEX
+- p3_9_05: 0 = No, 1 = Se atiende en Defensa
+- p3_9_06: 0 = No, 1 = Se atiende en Marina
+- p3_9_07: 0 = No, 1 = Se atiende en Centro de Salud u Hospital de la SSA
+- p3_9_08: 0 = No, 1 = Se atiende en IMSS PROSPERA (antes Oportunidades)
+- p3_9_09: 0 = No, 1 = Se atiende en Consultorios dependientes de farmacias
+- p3_9_10: 0 = No, 1 = Se atiende en Consultorio, clínica u hospital privado
+- p3_9_11: 0 = No, 1 = Se automedica
+- p3_9_77: 0 = No, 1 = Otro lugar (especifica)
+- p3_9_12: 0 = No, 1 = No se atiende
+- p3_9_99: 0 = No, 1 = No sabe
+- p3_11: 1 = Si habla lengua indigena, 2 = No
+- p3_21: 1 = Si trabajo al menos una hora la semanada pasada, 2 = No
+- p3_23: 1 = empleado, 2 = obrero, 3 = jornalero o peon, 4 = trabahador por su cuenta (no contrata trabajadores), 
+         5 = patron o empleador (contrata trabajadores), 6 = trabajador sin pago (negocio familiar o no familiar), 
+         7 = otra situacion
+- p3_26_1: ¿Cada cuándo obtiene (NOMBRE) sus ingresos o le pagan? 1 = cada mes, 2 = cada 15 dias, 3 = cada semana, 5 = diario, 6 = no tiene ingresos, 9 = no sabe
+- p5_1_01: 1 = Recibio apoyo de PROSPERA, NA
+- p5_1_02: 1 = Recibio becas escolares de PROSPERA, NA
+- p5_1_03: 1 = Recibio apoyo monetario adultos mayores PROSPERA, NA
+- p5_1_04: 1 = Recibio atencion medica de PROSPERA, NA
+- p5_1_05: 1 = Recibio papilla de PROSPERA, NA
+- p5_1_06: 1 = Recibio apoyo monetario del programa 70 y mas, NA
+- p5_1_07: 1 = Recibio pension alimenticia para adultos mayores, NA
+- p5_1_08: 1 = Recibio salud y nutrición para pueblos indígenas (suplementos con micro nutrimentos), NA
+- p5_1_09: 1 = Recibio apoyo de estancias infantiles, NA
+- p5_1_10: 1 = Recibio leche Liconsa o CONASUPO, NA
+- p5_1_11: 1 = Recibio despensas del DIF, NA
+- p5_1_12: 1 = Recibio despensas de otras organizaciones, NA
+- p5_1_13: 1 = Recibio apoyo de cocinas o comedores populares, NA
+- p5_1_14: 1 = Recibio apoyo de desayunos escolares, NA
+- p5_1_15: 1 = Recibio apoyo de suplementos de vitaminas y minerales, NA
+- p5_1_16: 1 = Recibio apoyo de becas educativas distintas a las de PROSPERA, NA
+- p5_1_17: 1 = Recibio apoyo de organizacion no gubernamental o civil, NA
+- p5_1_18: 1 = Recibio otros apoyos monetarios para adultos mayores, NA
+- p5_1_19: 1 = Recibio otros apoyos, NA
+         
+```{r}
+residentes <- residentes |>
+  select(upm:numren, ) |> 
   mutate(upm = as.numeric(upm), 
          viv_sel = as.numeric(viv_sel), 
          hogar = as.numeric(hogar), 
          numren = as.numeric(numren))
+```
+
+
+
+```{r}
+hogares <- read_sav(here("data/", "CS_HOGARES.sav")) |>
+  janitor::clean_names()
+
+hogares |>
+  mutate(upm = as.numeric(upm), 
+         viv_sel = as.numeric(viv_sel), 
+         numren = as.numeric(numren))
+
+hogares |>
+  pull(p3_9_01) |>
+  str()
+
+hogares |>
+  group_by(p3_21) |>
+  count()
+
+
 ```
 
 Uniendo archivo de hogares y adultos usando las variables upm, viv_sel, hogar y numren. Guardamos la base de datos entera como ensanut18_all.RData
@@ -38,5 +233,28 @@ Uniendo archivo de hogares y adultos usando las variables upm, viv_sel, hogar y 
 ensanut18_all <- left_join(adultos, hogares, by = c("upm", "viv_sel", "hogar", "numren"))
 
 save(ensanut18_all, file = here("data/", "ensanut18_all.RData"))
+```
+
+Base de datos de Hogares:
+
+- p7_2_1: En los últimos 3 meses, ¿cuánto gastaron los integrantes del hogar en... cuidados por pasar la noche en un hospital o en alguna clínica de salud?
+- p7_2_2: cuidados o atención de médicos, enfermeras o parteras que no requirió de pasar la noche en un hospital o clínica de salud, excluyendo los gastos en medicinas?
+- p7_2_3: cuidados de curanderos tradicionales o alternativos, incluyendo gastos en medicinas tradicionales?
+```{r}
+ensanut18_all_small <- ensanut18_all |>
+  rename(sexo = sexo.x, 
+         edad = edad.x, 
+         region = region.x,
+         estrato = estrato.x, 
+         l_indigena = p3_11.y, 
+         est_dis = est_dis.x, 
+         ent = ent.x, 
+         est_dis = est_dis.x, 
+         upm_dis = upm_dis.x, 
+         dominio = dominio.x) |>
+  select(upm:numren, edad:f_20mas, l_indigena, p2_1_1:p2_1_7, dv_bin, p14_1, p14_3, p3_21, p3_23, p3_26_1, p3_26_2, nivel, p7_2_1, p7_2_2, p7_2_3, p5_1_01:p5_1_19, p3_9_01:p3_9_99, p3_1, p4_1)
+
+save(ensanut18_all_small, file = here("data/", "ensanut18_all_small.RData"))
+
 ```
 

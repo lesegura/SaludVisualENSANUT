@@ -1,0 +1,72 @@
+---
+title: "2 - data_wrangling_ensanut_2018"
+author: "Luis E Segura"
+date: "2023-11-07"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "tidymodels", "survey", "srvyr", "haven")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+load(here("data/", "ensanut18_all_small.RData"))
+```
+
+```{r}
+ensanut18_all_small |>
+  group_by(p7_2_3) |>
+  count() |>
+  print(n = Inf)
+
+ensanut18_all_small |> 
+  mutate(ses = factor(case_when(estrato == 1 ~ 4, 
+                                estrato == 2 ~ 3, 
+                                estrato == 3 ~ 2, 
+                                estrato == 4 ~ 1), 
+                      labels = c("High", "Middle high", "Middle low", "Low")), 
+         age_cat = factor(ifelse(edad < 40, 1, 
+                                 ifelse(edad > 39 & edad < 60, 2, 3)), 
+                          labels = c("20 - 39 yo", "40 - 59 yo", "60+ yo")), 
+         sexo = factor(sexo, labels = c("Men", "Women")), 
+         urbanicity = factor(dominio, labels = c("Urban", "Rural")),  
+         region = factor(region, labels = c("North", "Center", "Mexico City", "South")), 
+         l_indigena = factor(ifelse(l_indigena == 2, 0, l_indigena), labels = c("No", "Yes")), 
+         p2_1_1 = p2_1_1 - 1, 
+         p2_1_2 = p2_1_2 - 1, 
+         p2_1_3 = p2_1_3 - 1, 
+         p2_1_4 = p2_1_4 - 1, 
+         p2_1_5 = p2_1_5 - 1, 
+         p2_1_6_r = case_when(p2_1_6 == 4 ~ 3, 
+                              p2_1_6 == 3 ~ 2, 
+                              p2_1_6 == 2 ~ 1, 
+                              p2_1_6 == 1 ~ 0), 
+         p2_1_7 = p2_1_7 - 1, 
+         dv_bin_fct = factor(dv_bin, labels = c("No Visual Disability", "Yes Visual Disability")), 
+         lentes = ifelse(p14_1 == 2, 0, p14_1), 
+         lentes_fct = factor(lentes, labels = c("No", "Si")), 
+         dv_fct = factor(p14_3, labels = c("No difficulty", "Some difficulty", 
+                                           "A lot of difficulty", "Cannot see at all")), 
+         work_pw = factor(p3_21, labels = c("Yes", "No")), 
+         work_type = factor(p3_23, labels = c("empleada(o)", "obrera(o)", "jornalera(o) o peona(ón)", 
+                                              "trabajadora(or) por su cuenta", "patrona(ón) o empleadora(or)", 
+                                              "trabajadora(or) sin pago", "otro")), 
+         education = factor(case_when(nivel < 3 ~ 4, 
+                                      nivel == 3 ~ 3, 
+                                      nivel == 4 ~ 2, 
+                                      nivel > 4 ~ 1), 
+                            labels = c("More than high school education", 
+                                       "High school education","Secondary school", 
+                                       "Elementary education or lower")), 
+         ) |>
+  rename(dv_num = p14_3)
+
+
+```
+
