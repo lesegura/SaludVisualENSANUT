@@ -24,50 +24,8 @@ Importando archivos de base de datos salud adultos ENSANUT 2018
 adultos <- read_sav(here("data/", "CS_ADULTOS.sav")) |>
   janitor::clean_names()
 
-grep("p11_8", names(adultos), value = T)
-
-adultos |>
-  group_by(p11_1) |>
-  count()
-
-adultos |>
-  filter(!is.na(p3_7_8)) |>
-  group_by(p3_7_8) |>
-  summarise(n = n()) |>
-  mutate(prop = n / sum(n))
-
-design.ensanut <- adultos %>%
-  as_survey_design(strata = est_dis, 
-                   ids = upm_dis, 
-                   weights = f_20mas, 
-                   nest = T)
-
-design.ensanut |>
-  mutate(dv = ifelse(p14_3 %in% c(1, 2), 0, 1)) |>
-  filter(p11_1 == 1) |>
-  group_by(dv, p11_8) |>
-  summarise(prop = survey_prop(), 
-            n = survey_total())
-
-design.ensanut |>
-  mutate(p3_7_8 = ifelse(p3_7_8 == 2, 0, 
-                         ifelse(p3_7_8 == 9, NA, p3_7_8)), 
-         p3_6_r = case_when(p3_6 %in% c("01", "02") ~ "IMSS", 
-                          p3_6 %in% c("03", "04", "11") ~ "SS", 
-                          p3_6 %in% c("05") ~ "DIF y CR", 
-                          p3_6 %in% c("06", "07") ~ "ISSSTE", 
-                          p3_6 == "08" ~ "Marina, Defensa, PEMEX", 
-                          p3_6 == "09" ~ "Privado", 
-                          p3_6 == "10" ~ "Hospital Civil", 
-                          p3_6 == "12" ~ "Consultorios de Farmacias", 
-                          p3_6 %in% c("13", "14") ~ "Otras")) |>
-  group_by(p3_6_r) |>
-  summarise(n = n(), 
-            prop = survey_mean(p3_7_8, na.rm = T)) |>
-  mutate(prop = prop * 100) |>
-  arrange(desc(prop))
-
 ```
+
 Variables que vamos a seleccionar
 
 Base de datos Salud Adultos
@@ -132,13 +90,45 @@ Tabaquismo:
 - p13_5
 - p13_6
 - p13_6_1
-- p13_6_2
 
 Alcoholismo:
 
-- p13_11, p13_14, p13_15. Primera para si/no,ultimas para binge
+- p13_11, p13_14. Primera para si/no,ultimas para binge
 
 DV por accidente - p11_8
+
+```{r}
+adultos <- adultos |>
+  select(upm:numren, edad:diferencia, diabetes = p3_1, diab_check = p3_6, diab_rev = p3_7_8, diab_dv = p3_18_3, diab_perd_vsn = p3_18_4, 
+         hipertension = p4_1, hta_retina = p4_10_1, usa_lentes = p14_1, disc_visual = p14_3, p2_1_1:p2_1_7, obesidad = p1_1, p5_2_1:p5_2_3, 
+         e_renal_crn = p6_1_3, p6_4, p6_6, p13_1:p13_6, p13_6_1, p13_11, p13_14, disc_visual_accdnt = p11_8)
+
+
+# design.ensanut <- adultos %>%
+#   as_survey_design(strata = est_dis, 
+#                    ids = upm_dis, 
+#                    weights = f_20mas, 
+#                    nest = T)
+# 
+# design.ensanut |>
+#   mutate(p3_7_8 = ifelse(p3_7_8 == 2, 0, 
+#                          ifelse(p3_7_8 == 9, NA, p3_7_8)), 
+#          p3_6_r = case_when(p3_6 %in% c("01", "02") ~ "IMSS", 
+#                           p3_6 %in% c("03", "04", "11") ~ "SS", 
+#                           p3_6 %in% c("05") ~ "DIF y CR", 
+#                           p3_6 %in% c("06", "07") ~ "ISSSTE", 
+#                           p3_6 == "08" ~ "Marina, Defensa, PEMEX", 
+#                           p3_6 == "09" ~ "Privado", 
+#                           p3_6 == "10" ~ "Hospital Civil", 
+#                           p3_6 == "12" ~ "Consultorios de Farmacias", 
+#                           p3_6 %in% c("13", "14") ~ "Otras")) |>
+#   group_by(p3_6_r) |>
+#   summarise(n = n(), 
+#             prop = survey_mean(p3_7_8, na.rm = T)) |>
+#   mutate(prop = prop * 100) |>
+#   arrange(desc(prop))
+
+```
 
 Importando archivos de base de datos residentes ENSANUT 2018
 
@@ -147,7 +137,7 @@ residentes <- read_sav(here("data/", "CS_RESIDENTES.sav")) |>
   janitor::clean_names()
 ```
 
-Base de datos de Residentes:
+Variables a seleccionar de la base de datos de Residentes:
 
 - nivel: 00 = Ninguno, 01 = Preescolar, 02 = Primaria, 03 = Secundaria, 04 = Preparatoria o bachillerato, 
          05 = Normal basica, 06 = Estudios tecnicos o comerciales con primaria terminada, 
@@ -177,6 +167,7 @@ Base de datos de Residentes:
          5 = patron o empleador (contrata trabajadores), 6 = trabajador sin pago (negocio familiar o no familiar), 
          7 = otra situacion
 - p3_26_1: ¿Cada cuándo obtiene (NOMBRE) sus ingresos o le pagan? 1 = cada mes, 2 = cada 15 dias, 3 = cada semana, 5 = diario, 6 = no tiene ingresos, 9 = no sabe
+- p3_26_2: ¿Cuánto ganó o en cuánto calcula sus ingresos?
 - p5_1_01: 1 = Recibio apoyo de PROSPERA, NA
 - p5_1_02: 1 = Recibio becas escolares de PROSPERA, NA
 - p5_1_03: 1 = Recibio apoyo monetario adultos mayores PROSPERA, NA
@@ -199,62 +190,35 @@ Base de datos de Residentes:
          
 ```{r}
 residentes <- residentes |>
-  select(upm:numren, ) |> 
-  mutate(upm = as.numeric(upm), 
-         viv_sel = as.numeric(viv_sel), 
-         hogar = as.numeric(hogar), 
-         numren = as.numeric(numren))
+  select(upm:numren, p3_9_01:p3_9_99, l_indigena = p3_11, trabajo = p3_21, tipo_trabajo = p3_23, p3_26_1, p3_26_2, p5_1_01:p5_1_19) |> 
+  mutate(hogar = as.numeric(hogar))
 ```
 
-
+Importando archivos de base de datos hogares ENSANUT 2018
 
 ```{r}
 hogares <- read_sav(here("data/", "CS_HOGARES.sav")) |>
   janitor::clean_names()
-
-hogares |>
-  mutate(upm = as.numeric(upm), 
-         viv_sel = as.numeric(viv_sel), 
-         numren = as.numeric(numren))
-
-hogares |>
-  pull(p3_9_01) |>
-  str()
-
-hogares |>
-  group_by(p3_21) |>
-  count()
-
-
 ```
 
-Uniendo archivo de hogares y adultos usando las variables upm, viv_sel, hogar y numren. Guardamos la base de datos entera como ensanut18_all.RData
-```{r}
-ensanut18_all <- left_join(adultos, hogares, by = c("upm", "viv_sel", "hogar", "numren"))
-
-save(ensanut18_all, file = here("data/", "ensanut18_all.RData"))
-```
-
-Base de datos de Hogares:
+Variables a seleccionar de la base de datos de Hogares:
 
 - p7_2_1: En los últimos 3 meses, ¿cuánto gastaron los integrantes del hogar en... cuidados por pasar la noche en un hospital o en alguna clínica de salud?
 - p7_2_2: cuidados o atención de médicos, enfermeras o parteras que no requirió de pasar la noche en un hospital o clínica de salud, excluyendo los gastos en medicinas?
 - p7_2_3: cuidados de curanderos tradicionales o alternativos, incluyendo gastos en medicinas tradicionales?
+
 ```{r}
-ensanut18_all_small <- ensanut18_all |>
-  rename(sexo = sexo.x, 
-         edad = edad.x, 
-         region = region.x,
-         estrato = estrato.x, 
-         l_indigena = p3_11.y, 
-         est_dis = est_dis.x, 
-         ent = ent.x, 
-         est_dis = est_dis.x, 
-         upm_dis = upm_dis.x, 
-         dominio = dominio.x) |>
-  select(upm:numren, edad:f_20mas, l_indigena, p2_1_1:p2_1_7, dv_bin, p14_1, p14_3, p3_21, p3_23, p3_26_1, p3_26_2, nivel, p7_2_1, p7_2_2, p7_2_3, p5_1_01:p5_1_19, p3_9_01:p3_9_99, p3_1, p4_1)
+hogares <- hogares |>
+  select(upm:hogar, p7_2_1, p7_2_2, p7_2_3)
+```
 
-save(ensanut18_all_small, file = here("data/", "ensanut18_all_small.RData"))
 
+Uniendo archivo de hogares y adultos usando las variables upm, viv_sel, hogar y numren. Guardamos la base de datos entera como ensanut18_all.RData
+```{r}
+ensanut18_all <- adultos |>
+  left_join(residentes, by = c("upm", "viv_sel", "hogar", "numren")) |>
+  left_join(hogares, by = c("upm", "viv_sel", "hogar"))
+
+save(ensanut18_all, file = here("data/", "ensanut18_all.RData"))
 ```
 
