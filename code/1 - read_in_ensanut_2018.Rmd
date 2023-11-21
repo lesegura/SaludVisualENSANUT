@@ -109,24 +109,6 @@ adultos <- adultos |>
 #                    ids = upm_dis, 
 #                    weights = f_20mas, 
 #                    nest = T)
-# 
-# design.ensanut |>
-#   mutate(p3_7_8 = ifelse(p3_7_8 == 2, 0, 
-#                          ifelse(p3_7_8 == 9, NA, p3_7_8)), 
-#          p3_6_r = case_when(p3_6 %in% c("01", "02") ~ "IMSS", 
-#                           p3_6 %in% c("03", "04", "11") ~ "SS", 
-#                           p3_6 %in% c("05") ~ "DIF y CR", 
-#                           p3_6 %in% c("06", "07") ~ "ISSSTE", 
-#                           p3_6 == "08" ~ "Marina, Defensa, PEMEX", 
-#                           p3_6 == "09" ~ "Privado", 
-#                           p3_6 == "10" ~ "Hospital Civil", 
-#                           p3_6 == "12" ~ "Consultorios de Farmacias", 
-#                           p3_6 %in% c("13", "14") ~ "Otras")) |>
-#   group_by(p3_6_r) |>
-#   summarise(n = n(), 
-#             prop = survey_mean(p3_7_8, na.rm = T)) |>
-#   mutate(prop = prop * 100) |>
-#   arrange(desc(prop))
 
 ```
 
@@ -190,7 +172,7 @@ Variables a seleccionar de la base de datos de Residentes:
          
 ```{r}
 residentes <- residentes |>
-  select(upm:numren, p3_9_01:p3_9_99, l_indigena = p3_11, trabajo = p3_21, tipo_trabajo = p3_23, p3_26_1, p3_26_2, p5_1_01:p5_1_19) |> 
+  select(upm:numren, p3_9_01:p3_9_99, l_indigena = p3_11, trabajo = p3_21, tipo_trabajo = p3_23, p3_26_1, p3_26_2, p5_1_01:p5_1_19, nivel) |> 
   mutate(hogar = as.numeric(hogar))
 ```
 
