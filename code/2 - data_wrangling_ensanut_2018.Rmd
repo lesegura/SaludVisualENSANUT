@@ -112,8 +112,6 @@ ensanut18_4analysis <- ensanut18_all |>
                                        "High school education","Secondary school", 
                                        "Elementary education or lower"))) 
 
-
-
 ensanut18_4analysis <- ensanut18_4analysis |>
   select(upm:ent, est_dis:f_20mas, age_cat, sexo, urbanicity, education, ses, insurance, l_indigena, work_pwk, work_type, diabetes, 
          diab_check, diab_rev, diab_dv, diab_perd_vsn, hipertension, hta_retina, usa_lentes, disc_visual, disc_visual_severa, cesd_score, 
