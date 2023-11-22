@@ -22,10 +22,6 @@ load(here("data/", "ensanut18_all.RData"))
 Limpiamos y recodificamos variables
 
 ```{r}
-ensanut18_all |>
-  group_by(nivel) |>
-  count()
-
 ensanut18_4analysis <- ensanut18_all |>
   labelled::remove_labels()  |>
   mutate(ses = factor(case_when(estrato == 1 ~ 4, 
@@ -86,25 +82,21 @@ ensanut18_4analysis <- ensanut18_all |>
                                   ifelse(p13_2 %in% c(1, 2), 1, NA)), labels = c("No", "Yes")), 
          smk_former = factor(ifelse(p13_4 == 3, 0, 
                                     ifelse(p13_4 %in% c(1, 2), 1, NA)), labels = c("No", "Yes")),
-         smk_cat = factor(case_when(smk_curr == "No" & smk_former == "No" ~ 0, 
-                             smk_curr == "No" & smk_former == "Yes" ~ 1, 
-                             smk_curr == "Yes" ~ 2), labels = c("Never", "Former", "Current")), 
+         smk_cat = case_when(p13_1 == 1 & p13_2 == 1 ~ "Current daily", 
+                             p13_1 == 1 & p13_2 == 2 ~ "Current somedays", 
+                             p13_1 == 1 & p13_2 == 3 ~ "Former smokers", 
+                             p13_1 == 2 ~ "Never smokers"), 
          p13_14 = as.integer(p13_14), 
          binge_drnk = case_when(p13_14 == 88 ~ NA,
                                 p13_14 > 0 & p13_14 < 81 ~ 1, 
-                                p13_14 == 0 ~ 0, 
-                                p13_14 == 98 ~ 2), 
+                                p13_14 %in% c(0, 98) ~ 0), 
          heavy_drnk = case_when(p13_14 > 88 ~ NA,
                                 p13_14 > 4 & p13_14 < 81 ~ 1, 
                                 p13_14 < 5 ~ 0, 
                                 p13_14 == 98 ~ 2), 
-         alcohol = factor(ifelse(p13_11 == 2, 0, 
-                          ifelse(p13_11 == 3, 2, p13_11)), labels = c("No", "Yes", "Never")), 
-         alcohol_cat = factor(case_when(alcohol == "Never" ~ 0, 
-                                 alcohol == "No" ~ 1, 
-                                 alcohol == "Yes" & binge_drnk == 0 & heavy_drnk == 0 ~ 2,
-                                 alcohol == "Yes" & is.na(binge_drnk) | is.na(heavy_drnk) ~ 2,
-                                 alcohol == "Yes" & binge_drnk == 1 ~ 3), labels = c("Never", "Former", "Current, no binge", "Binge")),
+         alcohol = factor(case_when(p13_11 == 3 ~ 0,
+                                    p13_11 == 2 ~ 1, 
+                                    p13_11 == 1 ~ 2), labels = c("Never", "No", "Yes")), 
          work_pwk = factor(trabajo, labels = c("Yes", "No")), 
          insurance = factor(ifelse(p3_9_01 == 1 | p3_9_02 == 1 | p3_9_03 == 1 | p3_9_04 == 1 |
                               p3_9_05 == 1 | p3_9_06 == 1 | p3_9_07 == 1 | p3_9_08 == 1, 1, 0), labels = c("No insurance", "Insurance")), 
@@ -125,7 +117,7 @@ ensanut18_4analysis <- ensanut18_all |>
 ensanut18_4analysis <- ensanut18_4analysis |>
   select(upm:ent, est_dis:f_20mas, age_cat, sexo, urbanicity, education, ses, insurance, l_indigena, work_pwk, work_type, diabetes, 
          diab_check, diab_rev, diab_dv, diab_perd_vsn, hipertension, hta_retina, usa_lentes, disc_visual, disc_visual_severa, cesd_score, 
-         cesd, obesidad, cardio_dis, kidney_dis, dyslipidemia, smk_cat, alcohol_cat)
+         cesd, obesidad, cardio_dis, kidney_dis, dyslipidemia, smk_cat, alcohol, binge_drnk)
 
 
 save(ensanut18_4analysis, file = here("data/", "ensanut18_4analysis.RData"))
