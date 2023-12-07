@@ -55,7 +55,7 @@ ensanut18_4analysis <- ensanut18_all |>
          usa_lentes = factor(ifelse(usa_lentes == 2, 0, usa_lentes), labels = c("No", "Yes")),
          disc_visual = factor(disc_visual, labels = c("No difficulty", "Some difficulty", 
                                                       "A lot of difficulty", "Cannot see at all")),
-         disc_visual_severa = factor(ifelse(disc_visual %in% c("No difficulty", "Some difficulty"), 1, 0), labels = c("No", "Yes")),
+         disc_visual_severa = factor(ifelse(disc_visual %in% c("No difficulty", "Some difficulty"), 0, 1), labels = c("No", "Yes")),
          p2_1_1 = p2_1_1 - 1, 
          p2_1_2 = p2_1_2 - 1, 
          p2_1_3 = p2_1_3 - 1, 
@@ -87,9 +87,9 @@ ensanut18_4analysis <- ensanut18_all |>
                              p13_1 == 1 & p13_2 == 3 ~ "Former smokers", 
                              p13_1 == 2 ~ "Never smokers"), 
          p13_14 = as.integer(p13_14), 
-         binge_drnk = case_when(p13_14 == 88 ~ NA,
+         binge_drnk = factor(case_when(p13_14 == 88 ~ NA,
                                 p13_14 > 0 & p13_14 < 81 ~ 1, 
-                                p13_14 %in% c(0, 98) ~ 0), 
+                                p13_14 %in% c(0, 98) ~ 0), labels = c("No", "Yes")), 
          heavy_drnk = case_when(p13_14 > 88 ~ NA,
                                 p13_14 > 4 & p13_14 < 81 ~ 1, 
                                 p13_14 < 5 ~ 0, 
@@ -97,7 +97,7 @@ ensanut18_4analysis <- ensanut18_all |>
          alcohol = factor(case_when(p13_11 == 3 ~ 0,
                                     p13_11 == 2 ~ 1, 
                                     p13_11 == 1 ~ 2), labels = c("Never", "No", "Yes")), 
-         work_pwk = factor(trabajo, labels = c("Yes", "No")), 
+         work_pwk = factor(ifelse(trabajo == 2, 0, trabajo), labels = c("No", "Yes")), 
          insurance = factor(ifelse(p3_9_01 == 1 | p3_9_02 == 1 | p3_9_03 == 1 | p3_9_04 == 1 |
                               p3_9_05 == 1 | p3_9_06 == 1 | p3_9_07 == 1 | p3_9_08 == 1, 1, 0), labels = c("No insurance", "Insurance")), 
          work_type = factor(tipo_trabajo, labels = c("empleada(o)", "obrera(o)", "jornalera(o) o peona(ón)", 
@@ -110,12 +110,21 @@ ensanut18_4analysis <- ensanut18_all |>
                                       nivel > 4 ~ 1), 
                             labels = c("More than high school education", 
                                        "High school education","Secondary school", 
-                                       "Elementary education or lower"))) 
+                                       "Elementary education or lower")), 
+         accidente = factor(ifelse(accidente == 2, 0, accidente), labels = c("No", "Yes")), 
+         dis_accidente = factor(case_when(disc_visual_accdnt == 7 ~ 0, 
+                                   disc_visual_accdnt %in% c(1, 2) ~ 1, 
+                                   disc_visual_accdnt %in% c(3, 4) ~ 2, 
+                                   disc_visual_accdnt == 5 ~ 3, 
+                                   disc_visual_accdnt == 6 ~ 4, 
+                                   disc_visual_accdnt == 9 ~ NA), 
+                                labels = c("Ninguno", "Limitación motora", "Limitación para hablar u oír", 
+                                           "Dificultad para ver o ceguera", "Otra limitación física o mental"))) 
 
 ensanut18_4analysis <- ensanut18_4analysis |>
   select(upm:ent, est_dis:f_20mas, age_cat, sexo, urbanicity, education, ses, insurance, l_indigena, work_pwk, work_type, diabetes, 
          diab_check, diab_rev, diab_dv, diab_perd_vsn, hipertension, hta_retina, usa_lentes, disc_visual, disc_visual_severa, cesd_score, 
-         cesd, obesidad, cardio_dis, kidney_dis, dyslipidemia, smk_cat, alcohol, binge_drnk)
+         cesd, obesidad, cardio_dis, kidney_dis, dyslipidemia, smk_cat, alcohol, binge_drnk, accidente, dis_accidente)
 
 
 save(ensanut18_4analysis, file = here("data/", "ensanut18_4analysis.RData"))

@@ -1,0 +1,195 @@
+---
+title: "3 - table 1"
+author: "Luis E Segura"
+date: "2023-12-06"
+output: 
+  word_document: 
+    reference_docx: word_template.docx
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr", "doParallel", "foreach")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+## setup parallel processing
+no_cores <- detectCores() - 1  
+registerDoParallel(cores = no_cores)
+options(cores = no_cores)
+getDoParWorkers()                   
+getDoParName()
+
+```
+
+### Tabla 1. Distribución de predictores de discapacidad visual severa
+
+```{r}
+### leemos la base de datos
+load(here("data/", "ensanut18_4analysis.RData"))
+```
+
+```{r}
+### Creamos el objeto del diseño muestral para calcular los estimadores ponderados (p.ej., prevalencias)
+ensanut_diseno <- ensanut18_4analysis %>%
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+```
+
+```{r}
+### guardamos los nombres de las variables en un objeto llamado nombres_var
+nombres_var <- names(ensanut18_4analysis)[-c(1:5, 7:11, 28:30)]
+
+### Ccreamos una función para calcular las n y prevalencias de las diferentes covariables.
+fun_desc <- function(x) {
+  
+  muestra_tot <- ensanut_diseno |>
+    group_by(!!sym(x)) |>
+    summarize(n = n(), 
+              prop = survey_prop(vartype = c("ci"), proportion = T)) |>
+    mutate(var = x, 
+           `w %` = str_glue("{round(prop * 100, 2)}%")) |>
+    select(var, level = !!sym(x), Overall = n, `w %`)
+  
+
+  muestra_estrat <- ensanut_diseno |>
+    group_by(!!sym(x), disc_visual_severa) |>
+    summarize(n = n(), 
+              prop = survey_prop(vartype = c("ci"), proportion = T)) |>
+    select(!c(prop_low, prop_upp)) |>
+    pivot_wider(names_from = "disc_visual_severa", values_from = c("n", "prop")) |>
+    mutate(var = x, 
+           `n Without SVD` = n_No,
+           `n With SVD` = n_Yes,
+           `w % Without SVD` = str_glue("{round(prop_No * 100, 2)}%"), 
+           `w % With SVD` = str_glue("{round(prop_Yes * 100, 2)}%")) |>
+    select(var, level = !!sym(x), `n Without SVD`, `w % Without SVD`, `n With SVD`, `w % With SVD`)
+  
+  tab <- muestra_tot |> 
+    left_join(muestra_estrat, by = c("var", "level")) 
+  
+  return(tab)
+    
+}
+
+
+```
+
+```{r}
+### Corremos la función en un loop para cada variable dentro del objeto `nombres_var`
+tab_list <- foreach(i = nombres_var) %dopar% {
+  fun_desc(i)
+}
+
+
+svd_tab <- ensanut_diseno |>
+  group_by(disc_visual_severa) |>
+  summarise(n = n(), 
+            prop = survey_prop(vartype = c("ci"), proportion = T)) |>
+  select(!c(prop_low, prop_upp)) |>
+  pivot_wider(names_from = "disc_visual_severa", values_from = c("n", "prop")) |>
+  mutate(var = "Overall", 
+         level = NA, 
+         Overall = NA, 
+         `w %` = NA, 
+         `w % Without SVD` = str_glue("{round(prop_No * 100, 2)}%"), 
+         `w % With SVD` = str_glue("{round(prop_Yes * 100, 2)}%")) |>
+  select(var, level, Overall, `w %`, `n Without SVD` = n_No, 
+         `w % Without SVD`, `n With SVD` = n_Yes, `w % With SVD`)
+
+edad_muestra <- ensanut_diseno |>
+  summarise(mean_age = survey_mean(edad), 
+            min_age = min(edad), 
+            max_age = max(edad)) |>
+  mutate(`w %` = str_glue("{round(mean_age)} ({min_age} , {max_age})"), 
+         var = "age",
+         level = "mean (min, max)", 
+         Overall = NA) |>
+  select(var, level, Overall, `w %`)
+
+edad_estrat <- ensanut_diseno |>
+  group_by(disc_visual_severa) |>
+  summarise(mean_age = survey_mean(edad), 
+            min_age = min(edad), 
+            max_age = max(edad)) |>
+  mutate(n = str_glue("{round(mean_age)} ({min_age} , {max_age})")) |>
+  select(disc_visual_severa, n) |>
+  pivot_wider(names_from = "disc_visual_severa", values_from = "n") |>
+  mutate(var = "age",
+         level = "mean (min, max)", 
+         `n Without SVD` = NA, 
+         `w % Without SVD` = No,
+         `n With SVD` = NA, 
+         `w % With SVD` = Yes) |>
+  select(var, level, `n Without SVD`, `w % Without SVD`, `n With SVD`, `w % With SVD`)
+
+edad_tab <- edad_muestra |>
+  left_join(edad_estrat, by = c("var", "level"))
+
+
+tab <- tab_list[-1] |>
+  bind_rows()
+
+table_1 <- bind_rows(svd_tab, tab_list[1], edad_tab, tab)
+
+
+```
+
+```{r}
+table_1 |>
+  mutate(var = factor(var), 
+         level = factor(level)) |>
+  mutate(var = recode(var, age = "Age", 
+                      age_cat = "Age group", 
+                      sexo = "Gender", 
+                      urbanicity = "Urbanicity", 
+                      education = "Education", 
+                      ses = "SES", 
+                      insurance = "Insurance", 
+                      l_indigena = "Speaks indigenous lenguage", 
+                      work_pwk = "Past-week work", 
+                      work_type = "Job type", 
+                      diabetes = "Diabetes", 
+                      diab_check = "Where was diabetes checked", 
+                      diab_rev = "Diabetes visual check referred", 
+                      diab_dv = "Visual disability due to diabetes", 
+                      diab_perd_vsn = "Lost vision due to diabetes", 
+                      hipertension = "Hypertension", 
+                      hta_retina = "Retinal damage due to HBP", 
+                      usa_lentes = "Use glasses", 
+                      cesd = "Depressive symptomatology", 
+                      obesidad = "Obesity", 
+                      cardio_dis = "Cardiovascular diseases", 
+                      kidney_dis = "Kidney disease", 
+                      dyslipidemia = "Dyslipidemia", 
+                      smk_cat = "Type of smoker", 
+                      alcohol = "Alcohol use", 
+                      binge_drnk = "Binge drinking", 
+                      accidente = "Work accident", 
+                      dis_accidente = "Disability due to work accident")) |>
+  flextable::as_grouped_data(groups = c("var")) |>
+  flextable::as_flextable(max_row = Inf, show_coltype = F, spread_first_col = TRUE, hide_grouplabel = TRUE, groups_to = "titles") |>
+  flextable::style(i = ~!is.na(var),
+        pr_p = officer::fp_par(text.align = "left", padding = 5, line_spacing = 1.5)) |>
+  flextable::prepend_chunks(i = ~is.na(var), j = 1, flextable::as_chunk("\t")) |>
+  flextable::set_header_labels(values = list(level = "", 
+                                             Overall = "N", 
+                                             `n Without SVD` = "N", 
+                                             `w % Without SVD` = "w %", 
+                                             `n With SVD` = "N", 
+                                             `w % With SVD` = "w %")) |>
+  flextable::add_header_row(values = c("", "Sample", "Without Severe Visual Disability", "With Severe Visual Disability"), 
+                            colwidths = c(1, 2, 2, 2), 
+                            top = T) |>
+  flextable::autofit()
+```
+
