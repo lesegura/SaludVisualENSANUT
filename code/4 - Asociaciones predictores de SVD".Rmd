@@ -167,9 +167,9 @@ chr_dis |>
 ```
 
 ```{r}
-var_mh <- names(ensanut18_4analysis)[c(33, 38:40, 43)]
+var_mh <- names(ensanut18_4analysis)[c(33, 38:40)]
 
-mh_res <- foreach(i = var_other) %dopar% {
+mh_res <- foreach(i = var_mh) %dopar% {
   reg_fun(i, "disc_visual_severa_num")
 
 }
@@ -177,8 +177,7 @@ mh_res <- foreach(i = var_other) %dopar% {
 
 ```{r}
 mh_res |>
-  bind_rows() |>
-  filter(var != "accidente_lim") |>
+  bind_rows()  |>
   mutate(term = case_when(var == "cesd" & term == "No depressive symptoms (REF)" ~ "No depressive symptoms (REF)", 
                           var == "smk_cat" & term == "Never smokers (REF)" ~ "Never smokers (REF)", 
                           var == "alcohol" & term == "Never (REF)" ~ "Never used alcohol (REF)",

@@ -47,9 +47,9 @@ ensanut_diseno <- ensanut18_4analysis %>%
 
 ```{r}
 ### guardamos los nombres de las variables en un objeto llamado nombres_var
-nombres_var <- names(ensanut18_4analysis)[-c(1:5, 7:11, 28:30)]
+nombres_var <- names(ensanut18_4analysis)[c(6, 13, 8, 14:19, 28, 34, 44, 24:25, 27, 35:37, 33, 38:42)]
 
-### Ccreamos una función para calcular las n y prevalencias de las diferentes covariables.
+### Creamos una función para calcular las n y prevalencias de las diferentes covariables.
 fun_desc <- function(x) {
   
   muestra_tot <- ensanut_diseno |>
@@ -151,19 +151,16 @@ table_1 |>
   mutate(var = recode(var, age = "Age", 
                       age_cat = "Age group", 
                       sexo = "Gender", 
+                      region = "Region",
                       urbanicity = "Urbanicity", 
                       education = "Education", 
                       ses = "SES", 
                       insurance = "Insurance", 
                       l_indigena = "Speaks indigenous lenguage", 
                       work_pwk = "Past-week work", 
-                      work_type = "Job type", 
-                      diabetes = "Diabetes", 
-                      diab_check = "Where was diabetes checked", 
-                      diab_rev = "Diabetes visual check referred", 
+                      diab_hbp = "Diabetes and/or hypertension", 
                       diab_dv = "Visual disability due to diabetes", 
                       diab_perd_vsn = "Lost vision due to diabetes", 
-                      hipertension = "Hypertension", 
                       hta_retina = "Retinal damage due to HBP", 
                       usa_lentes = "Use glasses", 
                       cesd = "Depressive symptomatology", 
