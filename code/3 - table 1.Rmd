@@ -157,7 +157,7 @@ table_1 |>
                       ses = "SES", 
                       insurance = "Insurance", 
                       l_indigena = "Speaks indigenous lenguage", 
-                      work_pwk = "Past-week work", 
+                      work_pwk = "Past-week employment", 
                       diab_hbp = "Diabetes and/or hypertension", 
                       diab_dv = "Visual disability due to diabetes", 
                       diab_perd_vsn = "Lost vision due to diabetes", 
