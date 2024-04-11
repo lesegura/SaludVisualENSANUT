@@ -78,19 +78,28 @@ socio_dem <- foreach(i = var_sociodem) %dopar% {
 ```
 
 ```{r}
-socio_dem |>
-  bind_rows() |>
+socio_dem_coefs <- socio_dem |>
+  bind_rows() 
+
+write_csv(socio_dem_coefs, here("results/", "socio_dem_coefs.csv"))
+
+### Figure 1. Sociodemographic predictor of Severe Visual Impairment among the Mexican population.
+socio_dem_coefs |>
   mutate(term = case_when(var == "work_pwk" & term == "No (REF)" ~ "Did not work", 
                           var == "work_pwk" & term == "Yes" ~ "Worked", 
-                          var == "l_indigena" & term == "No (REF)" ~ "Doesn't speak indigenous language", 
+                          var == "l_indigena" & term == "No (REF)" ~ "Doesn't speak indigenous language (REF)", 
                           var == "l_indigena" & term == "Yes" ~ "Speaks indigenous language", 
+                          var == "insurance" & term == "No insurance (REF)" ~ "Uninsured (REF)", 
+                          var == "insurance" & term == "Insurance" ~ "Insured",
+                          var == "work_pwk" & term == "Yes (REF)" ~ "Past-week employed (REF)", 
+                          var == "work_pwk" & term == "No" ~ "Past-week unemployed",
                           T ~ term), 
          term =  factor(term),  
          orden = seq(1, length(var), 1),
          color = factor(c(rep(1, 2), rep(2, 4), rep(3, 3), rep(4, 2), rep(5, 4), 
                    rep(6, 4), rep(7, 2), rep(8, 2), rep(9, 2)), 
                    labels = c("Sex", "Region", "Age group", "Urbanicity", "Education", 
-                              "SES", "Insurance", "Indigenous", "Past-week work"))) |>
+                              "SES", "Insurance", "Indigenous", "PW employment"))) |>
   ggplot(aes(y = reorder(ordered(term, levels = levels(term)), desc(orden)), 
              x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
   geom_point(size = 5, shape = "diamond") +
@@ -98,16 +107,16 @@ socio_dem |>
   scale_x_continuous(limits = c(0.2, 10.00), breaks = c(0.7, seq(1.0, 10.0, 1.0)), name = "Prevalence Ratio")  +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
-  theme(legend.position = "right", 
+  theme(legend.position = "left", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 14), 
         text = element_text(size = 12)) +
   labs(y = "", 
-       title = "Figure 1. Sociodemographic predictor of Severe Visual Impairment among the Mexican population.")
+       title = "")
 
 
 # ggsave("forestplot.pdf", width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
-# ggsave(here("results/", "forestplot.jpeg"), width = 12, height = 6, units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot.jpeg"), width = 12, height = 8, units = "in", dpi = 1800)
 
 ```
 
@@ -121,21 +130,27 @@ chr_dis <- foreach(i = var_chr_dis) %dopar% {
 ```
 
 ```{r}
-chr_dis |>
-  bind_rows() |>
-  mutate(term = case_when(var == "obesidad" & term == "No (REF)" ~ "No obesity", 
+chr_dis_coef <- chr_dis |>
+  bind_rows() 
+
+write_csv(chr_dis_coef, here("results/", "chr_dis_coef.csv"))
+
+
+### Figure 2. Health predictors of Severe Visual Impairment among the Mexican population.
+chr_dis_coef |>
+  mutate(term = case_when(var == "obesidad" & term == "No (REF)" ~ "No obesity (REF)", 
                           var == "obesidad" & term == "Yes" ~ "Obesity", 
-                          var == "diab_dv" & term == "No (REF)" ~ "No VI due to diabetes", 
+                          var == "diab_dv" & term == "No (REF)" ~ "No VI due to diabetes (REF)", 
                           var == "diab_dv" & term == "Yes" ~ "VI due to diabetes",
-                          var == "diab_perd_vsn" & term == "No (REF)" ~ "No vision loss due to diabetes", 
+                          var == "diab_perd_vsn" & term == "No (REF)" ~ "No vision loss due to diabetes (REF)", 
                           var == "diab_perd_vsn" & term == "Yes" ~ "Vision loss due to diabetes",
-                          var == "hta_retina" & term == "No (REF)" ~ "No retinal damage due to HBP", 
-                          var == "hta_retina" & term == "Yes" ~ "Retinal damage due to HBP",
-                          var == "cardio_dis" & term == "No CVD (REF)" ~ "No CVD", 
+                          var == "hta_retina" & term == "No (REF)" ~ "No retinal damage due to HTN (REF)", 
+                          var == "hta_retina" & term == "Yes" ~ "Retinal damage due to HTN",
+                          var == "cardio_dis" & term == "No CVD (REF)" ~ "No CVD (REF)", 
                           var == "cardio_dis" & term == "Yes" ~ "CVD",
-                          var == "kidney_dis" & term == "No (REF)" ~ "No kidney disease", 
+                          var == "kidney_dis" & term == "No (REF)" ~ "No kidney disease (REF)", 
                           var == "kidney_dis" & term == "Yes" ~ "Kidney disease",
-                          var == "dyslipidemia" & term == "No (REF)" ~ "No dyslipidemia", 
+                          var == "dyslipidemia" & term == "No (REF)" ~ "No dyslipidemia (REF)", 
                           var == "dyslipidemia" & term == "Yes" ~ "Dyslipidemia",
                           T ~ term), 
          term =  factor(term),  
@@ -143,7 +158,7 @@ chr_dis |>
          color = factor(c(rep(1, 2), rep(2, 4), rep(3, 2), rep(4, 2), rep(5, 2), rep(6, 2), 
                    rep(7, 2), rep(8, 2)), 
                    labels = c("Obesity", "Diabetes and HTN", "VI due to diabetes", 
-                              "Vission loss due to diabetes", "Retinal damage due to HBP", 
+                              "Vission loss due to diabetes", "Retinal damage due to HTN", 
                               "Cardiovasular disease (CVD)", 
                               "Kidney disease", "Dyslipidemia"))) |>
   ggplot(aes(y = reorder(ordered(term, levels = levels(term)), desc(orden)), 
@@ -153,16 +168,16 @@ chr_dis |>
   scale_x_continuous(limits = c(0.01, 10.00), breaks = c(0.7, seq(1.0, 10.0, 1.0)), name = "Prevalence Ratio")  +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
-  theme(legend.position = "right", 
+  theme(legend.position = "left", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 14), 
         text = element_text(size = 12)) +
   labs(y = "", 
-       title = "Figure 2. Health predictors of Severe Visual Impairment among the Mexican population.")
+       title = "")
 
 
 # ggsave("forestplot.pdf", width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
-# ggsave(here("results/", "forestplot2.jpeg"), width = 12, height = 6, units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot2.jpeg"), width = 12, height = 8, units = "in", dpi = 1800)
 
 ```
 
@@ -176,12 +191,17 @@ mh_res <- foreach(i = var_mh) %dopar% {
 ```
 
 ```{r}
-mh_res |>
-  bind_rows()  |>
+mh_res_coefs <- mh_res |>
+  bind_rows()  
+
+write_csv(mh_res_coefs, here("results/", "mh_res_coefs.csv"))
+
+### Figure 3. Mental Health Predictors of Severe Visual Impairment among the Mexican population.
+mh_res_coefs |>
   mutate(term = case_when(var == "cesd" & term == "No depressive symptoms (REF)" ~ "No depressive symptoms (REF)", 
                           var == "smk_cat" & term == "Never smokers (REF)" ~ "Never smokers (REF)", 
                           var == "alcohol" & term == "Never (REF)" ~ "Never used alcohol (REF)",
-                          var == "alcohol" & term == "No" ~ "Former alcohol usel",
+                          var == "alcohol" & term == "No" ~ "Former alcohol use",
                           var == "alcohol" & term == "Yes" ~ "Current alcohol use",
                           var == "binge_drnk" & term == "No (REF)" ~ "No binge (REF)",
                           var == "binge_drnk" & term == "Yes" ~ "Binge drinking",
@@ -201,14 +221,14 @@ mh_res |>
                      name = "Prevalence Ratio")  +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
-  theme(legend.position = "right", 
+  theme(legend.position = "left", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 14), 
         text = element_text(size = 12)) +
   labs(y = "", 
-       title = "Figure 3. Mental Health Predictors of Severe Visual Impairment among the Mexican population.")
+       title = "")
 
-ggsave(here("results/", "forestplot3.jpeg"), width = 12, height = 6, units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot3.jpeg"), width = 12, height = 8, units = "in", dpi = 1800)
 
 ```
 
@@ -220,13 +240,18 @@ accidente_res <- foreach(i = accidentes_var) %dopar% {
 
 }
 
-accidente_res |>
-  bind_rows() |>
+disability_coefs <- accidente_res |>
+  bind_rows() 
+
+write_csv(disability_coefs, here("results/", "disability_coefs.csv"))
+
+### Figure 4. Disability as Predictor of Severe Visual Impairment among the Mexican population.
+disability_coefs |>
   mutate(term = case_when(var == "accidente" & term == "No (REF)" ~ "No accident in the past year (REF)", 
                           var == "accidente" & term == "Yes" ~ "Accident in the past year", 
                           var == "dis_accidente" & term == "Ninguno (REF)" ~ "None (REF)", 
                           var == "dis_accidente" & term == "Limitación motora" ~ "Motor disability", 
-                          var == "dis_accidente" & term == "Limitación para hablar u oír" ~ "Speaking/hearing disability", 
+                          var == "dis_accidente" & term == "Limitación para hablar u oír" ~ "Speech/hearing disability", 
                           var == "dis_accidente" & term == "Dificultad para ver o ceguera" ~ "Visual disability/Blindness",
                           var == "dis_accidente" & term == "Otra limitación física o mental" ~ "Other physical/mental disability",
                           T ~ term), 
@@ -244,14 +269,14 @@ accidente_res |>
                      name = "Prevalence Ratio")  +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
-  theme(legend.position = "right", 
+  theme(legend.position = "left", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 14), 
         text = element_text(size = 12)) +
   labs(y = "", 
-       title = "Figure 4. Disability as Predictor of Severe Visual Impairment among the Mexican population.") 
+       title = "") 
 
-ggsave(here("results/", "forestplot4.jpeg"), width = 12, height = 6, units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot4.jpeg"), width = 12, height = 8, units = "in", dpi = 1800)
 
 
 ```
@@ -265,12 +290,23 @@ diab_tab <- ensanut_diseno |>
   summarise(n = survey_total(), 
             prop = survey_prop(vartype = c("ci"), proportion = T)) 
 
+diab_tab_n <-  diab_tab |>
+  group_by(diab_check) |>
+  summarise(`w n` = sum(n))
+  
+
 diab_tab <- diab_tab |>
   mutate(prop = prop * 100, 
          prop_low = prop_low * 100, 
          prop_upp = prop_upp * 100) |>
   mutate(`w % ` = str_glue("{round(prop, 1)}% ({round(prop_low, 1)}%; {round(prop_upp, 1)}%)")) |>
-  select(diab_check, diab_rev, n, `w % `)
+  select(diab_check, diab_rev, n, `w % `) |>
+  filter(diab_rev == "Yes") |>
+  select(!c(diab_rev, n))
+
+diab_tab <- left_join(diab_tab, diab_tab_n, by = "diab_check") |>
+  relocate(`w n`, .after = diab_check)
+
   
 write_csv(diab_tab, here("results/", "diab_tab.csv"))
 ```

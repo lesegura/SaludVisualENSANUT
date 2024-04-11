@@ -69,7 +69,7 @@ Cuando usa anteojos o lentes de contacto, ¿tiene dificultad para ver?
 
 - p14_3: 1 = Ninguna dificultad, 2 = cierta dificultad, 3 = Mucha dificultad, 4 = Le resulta imposible ver
 
-Sintomatología depresiva durante la ultima semana. Respuestas posibles 1 = rara vez o nunca (menos de un dia), 2 = pocas veces o alguna vez (1-2 dias), 3 = un numero de veces considerable (3-4 dias), 4 = todo el tiempo o la mayoria del tiempo (5-7 dias). El puntaje de cada indicador va de 0 a 3. Score para sintomas depresivos basados en el CESD-7 con punto de corta de 9 o mas y 5 o mas para adultos mayores (60 o mas). El 6to indicador debe invertirse. 
+Sintomatología depresiva durante la ultima semana. Respuestas posibles 1 = rara vez o nunca (menos de un dia), 2 = pocas veces o alguna vez (1-2 dias), 3 = un numero de veces considerable (3-4 dias), 4 = todo el tiempo o la mayoria del tiempo (5-7 dias). El puntaje de cada indicador va de 0 a 3. Score para sintomas depresivos basados en el CESD-7 con punto de corta de 9 o mas (https://www.saludpublica.mx/index.php/spm/article/view/7209/9386) y 5 o mas para adultos mayores (60 o mas, https://pubmed.ncbi.nlm.nih.gov/25272180/). El 6to indicador debe invertirse. 
 
 - p2_1_1: ¿sentía como si no pudiera quitarse de encima la tristeza?
 - p2_1_2: ¿le costaba concentrarse en lo que estaba haciendo?
