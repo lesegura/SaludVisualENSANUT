@@ -1,5 +1,5 @@
 ---
-title: "3 - table 1"
+title: "3 - Supplementary table 1"
 author: "Luis E Segura"
 date: "2023-12-06"
 output: 
