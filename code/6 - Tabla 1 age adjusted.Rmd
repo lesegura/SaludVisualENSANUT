@@ -1,0 +1,91 @@
+---
+title: "6 - Tabla 1 age adjusted"
+author: "Luis Segura"
+date: "2024-08-28"
+output:
+  word_document:
+    reference_docx: word_template.docx
+  pdf_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr", "doParallel", "foreach")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+## setup parallel processing
+no_cores <- detectCores() - 1  
+registerDoParallel(cores = no_cores)
+options(cores = no_cores)
+getDoParWorkers()                   
+getDoParName()
+
+```
+
+Para crear las proporciones ajustadas por edad de la tabla 1 hay cargar el archivo "age_adjusted_estimates.RData" que contiene los objetos `socio_dem` y `chr_dis`.
+
+```{r}
+load(here("data/", "age_adjusted_estimates.RData"))
+```
+
+```{r}
+socio_dem_pr <- map(socio_dem, "adj_prop") |>
+  bind_rows()
+
+chr_dis_pr <- map(chr_dis, "adj_prop") |>
+  bind_rows()
+
+table_1 <- bind_rows(socio_dem_pr, chr_dis_pr) |>
+  rename(level = term, 
+         `w % With SVD` = prop) |>
+  mutate(`w % With SVD` = round(`w % With SVD`, 2), 
+         `w % Without SVD` = 100 - `w % With SVD`, 
+         var = factor(var), 
+         level = factor(level)) |>
+  mutate(`w % With SVD` = str_glue("{`w % With SVD`}%"), 
+         `w % Without SVD` = str_glue("{`w % Without SVD`}%")) |>
+  relocate(`w % Without SVD`, .before = `w % With SVD`) |>
+  select(-c(conf_low, conf_high))
+
+```
+
+```{r}
+table_1 |>
+  mutate(var = recode(var, sexo = "Sex", 
+                      region = "Region",
+                      urbanicity = "Urbanicity", 
+                      education = "Education", 
+                      ses = "SES", 
+                      insurance = "Insurance", 
+                      l_indigena = "Speaks indigenous lenguage", 
+                      work_pwk = "Past-week employment", 
+                      obesidad = "Obesity", 
+                      diab_hbp = "Diabetes and/or hypertension", 
+                      diab_dv = "Visual disability due to diabetes", 
+                      diab_perd_vsn = "Lost vision due to diabetes", 
+                      hta_retina = "Retinal damage due to HBP", 
+                      cardio_dis = "Cardiovascular diseases", 
+                      kidney_dis = "Kidney disease", 
+                      dyslipidemia = "Dyslipidemia")) |>
+  flextable::as_grouped_data(groups = c("var")) |>
+  flextable::as_flextable(max_row = Inf, show_coltype = F, spread_first_col = TRUE, hide_grouplabel = TRUE, groups_to = "titles") |>
+  flextable::style(i = ~!is.na(var),
+        pr_p = officer::fp_par(text.align = "left", padding = 5, line_spacing = 1.5)) |>
+  flextable::prepend_chunks(i = ~is.na(var), j = 1, flextable::as_chunk("\t")) |>
+  flextable::set_header_labels(values = list(level = "", 
+                                             `w % Without SVD` = "w %", 
+                                             `w % With SVD` = "w %")) |>
+  flextable::add_header_row(values = c("", "Without Severe Visual Disability", "With Severe Visual Disability"), 
+                            colwidths = c(1, 1, 1), 
+                            top = T) |>
+  flextable::autofit()
+```
+

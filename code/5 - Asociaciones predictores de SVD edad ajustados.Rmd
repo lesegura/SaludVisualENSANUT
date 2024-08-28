@@ -88,8 +88,6 @@ adj_estimates_fun <- function(x, y, z){
 ```
 
 ```{r}
-adj_estimates_fun("region", "disc_visual_severa_num", "edad")
-
 var_sociodem <- names(ensanut18_4analysis)[c(6, 8, 14:19)]
 
 
@@ -111,6 +109,9 @@ chr_dis <- foreach(i = var_chr_dis,
   adj_estimates_fun(i, "disc_visual_severa_num", "edad")
 
 }
+
+# save(socio_dem, chr_dis, file = here("data/", "age_adjusted_estimates.RData"))
+
 ```
 
 
@@ -118,7 +119,7 @@ chr_dis <- foreach(i = var_chr_dis,
 socio_dem_coefs <- map(socio_dem, "model_estimates") |>
   bind_rows()
 
-write_csv(socio_dem_coefs, here("results/", "socio_dem_coefs_age_adj.csv"))
+# write_csv(socio_dem_coefs, here("results/", "socio_dem_coefs_age_adj.csv"))
 
 ### Figure 1. Sociodemographic predictor of Severe Visual Impairment among the Mexican population.
 socio_dem_coefs |>
@@ -160,7 +161,7 @@ socio_dem_coefs |>
 chr_dis_coef <- map(chr_dis, "model_estimates") |>
   bind_rows() 
 
-write_csv(chr_dis_coef, here("results/", "chr_dis_coef_age_adj.csv"))
+# write_csv(chr_dis_coef, here("results/", "chr_dis_coef_age_adj.csv"))
 
 
 ### Figure 2. Health predictors of Severe Visual Impairment among the Mexican population.
@@ -208,51 +209,5 @@ chr_dis_coef |>
 # ggsave(here("results/", "forestplot2_age_adj.pdf"), width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
 # ggsave(here("results/", "forestplot2_age_adj.jpeg"), width = 12, height = 8, units = "in", dpi = 1800)
 
-```
-
-```{r}
-table_1 |>
-  mutate(var = factor(var), 
-         level = factor(level)) |>
-  mutate(var = recode(var, age = "Age", 
-                      age_cat = "Age group", 
-                      sexo = "Gender", 
-                      region = "Region",
-                      urbanicity = "Urbanicity", 
-                      education = "Education", 
-                      ses = "SES", 
-                      insurance = "Insurance", 
-                      l_indigena = "Speaks indigenous lenguage", 
-                      work_pwk = "Past-week employment", 
-                      diab_hbp = "Diabetes and/or hypertension", 
-                      diab_dv = "Visual disability due to diabetes", 
-                      diab_perd_vsn = "Lost vision due to diabetes", 
-                      hta_retina = "Retinal damage due to HBP", 
-                      usa_lentes = "Use glasses", 
-                      cesd = "Depressive symptomatology", 
-                      obesidad = "Obesity", 
-                      cardio_dis = "Cardiovascular diseases", 
-                      kidney_dis = "Kidney disease", 
-                      dyslipidemia = "Dyslipidemia", 
-                      smk_cat = "Type of smoker", 
-                      alcohol = "Alcohol use", 
-                      binge_drnk = "Binge drinking", 
-                      accidente = "Work accident", 
-                      dis_accidente = "Disability due to work accident")) |>
-  flextable::as_grouped_data(groups = c("var")) |>
-  flextable::as_flextable(max_row = Inf, show_coltype = F, spread_first_col = TRUE, hide_grouplabel = TRUE, groups_to = "titles") |>
-  flextable::style(i = ~!is.na(var),
-        pr_p = officer::fp_par(text.align = "left", padding = 5, line_spacing = 1.5)) |>
-  flextable::prepend_chunks(i = ~is.na(var), j = 1, flextable::as_chunk("\t")) |>
-  flextable::set_header_labels(values = list(level = "", 
-                                             Overall = "N", 
-                                             `n Without SVD` = "N", 
-                                             `w % Without SVD` = "w %", 
-                                             `n With SVD` = "N", 
-                                             `w % With SVD` = "w %")) |>
-  flextable::add_header_row(values = c("", "Sample", "Without Severe Visual Disability", "With Severe Visual Disability"), 
-                            colwidths = c(1, 2, 2, 2), 
-                            top = T) |>
-  flextable::autofit()
 ```
 
