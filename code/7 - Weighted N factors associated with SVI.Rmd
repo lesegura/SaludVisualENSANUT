@@ -1,0 +1,92 @@
+---
+title: "7 - Weighted N factors associated with SVI"
+author: "Luis Segura"
+date: "2024-08-28"
+output: html_document
+---
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr", "doParallel", "foreach", 
+             "emmeans")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+## setup parallel processing
+no_cores <- detectCores() - 1  
+registerDoParallel(cores = no_cores)
+options(cores = no_cores)
+getDoParWorkers()                   
+getDoParName()
+
+```
+
+
+```{r, include = F}
+### leemos la base de datos
+load(here("data/", "ensanut18_4analysis.RData"))
+```
+
+```{r, include = F}
+### Creamos el objeto del diseño muestral para calcular los estimadores ponderados (p.ej., prevalencias)
+ensanut_diseno <- ensanut18_4analysis |>
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+```
+
+```{r, include = F}
+weighted_n_fun <- function(x) {
+  
+  ensanut_diseno |>
+    group_by(!!sym(x), disc_visual_severa) |>
+    summarise(weighted_n = survey_total()) |>
+    filter(disc_visual_severa == "Yes") |>
+    select(-c(weighted_n_se, disc_visual_severa)) |>
+    mutate(var = x) |>
+    rename(level = !!sym(x)) |>
+    relocate(var, .before = level)
+  
+}
+```
+
+```{r, include = F}
+my_vars <- names(ensanut18_4analysis)[c(6, 8, 14:19, 34, 44, 24, 25, 27, 35:37)]
+
+weighted_n_list <- foreach(i = my_vars, 
+        .packages = c("tidyverse", "survey", "srvyr")) %dopar% {
+          
+          weighted_n_fun(i)
+          
+        }
+
+wn_svi <- ensanut_diseno |>
+    group_by(disc_visual_severa) |>
+    summarise(weighted_n = survey_total()) |>
+    select(-weighted_n_se) |>
+    mutate(var = "Severe Visual Impairment") |>
+    rename(level = disc_visual_severa ) |>
+    relocate(var, .before = level)
+
+```
+
+
+```{r, include = F}
+table_weighted_n <- bind_rows(wn_svi, weighted_n_list |> bind_rows())
+```
+
+Las N ponderadas (weighted N) para los factores asociados a SVI son para aquellos con SVI (SVI == Yes)
+```{r}
+table_weighted_n |>
+  kableExtra::kbl(format.args = list(big.mark = ",")) |>
+  kableExtra::kable_styling()
+  
+```
+

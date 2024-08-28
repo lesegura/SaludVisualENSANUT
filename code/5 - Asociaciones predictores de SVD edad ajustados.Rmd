@@ -88,6 +88,15 @@ adj_estimates_fun <- function(x, y, z){
 ```
 
 ```{r}
+svi_prop <- svyglm(disc_visual_severa_num ~ edad, 
+                   design = ensanut_diseno, family = quasipoisson) |>
+  emmeans::emmeans(specs = ~ edad, type = "response", 
+                   data = ensanut18_4analysis) |>
+  broom::tidy()
+```
+
+The age adjusted prevalence of SVI is `r svi_prop |> pull(rate) |> mutate(rate * 100)`%
+```{r}
 var_sociodem <- names(ensanut18_4analysis)[c(6, 8, 14:19)]
 
 
