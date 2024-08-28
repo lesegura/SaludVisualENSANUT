@@ -1,0 +1,258 @@
+---
+title: "5 - Age adjusted associations main"
+author: "Luis Segura"
+date: "2024-08-27"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr", "doParallel", "foreach", 
+             "emmeans")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+## setup parallel processing
+no_cores <- detectCores() - 1  
+registerDoParallel(cores = no_cores)
+options(cores = no_cores)
+getDoParWorkers()                   
+getDoParName()
+
+```
+
+
+```{r}
+### leemos la base de datos
+load(here("data/", "ensanut18_4analysis.RData"))
+```
+
+```{r}
+### Creamos el objeto del diseño muestral para calcular los estimadores ponderados (p.ej., prevalencias)
+ensanut_diseno <- ensanut18_4analysis |>
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+```
+
+```{r}
+adj_estimates_fun <- function(x, y, z){
+  
+  reference <- ensanut18_4analysis |>
+    pull(!!sym(x)) |> 
+    levels()
+  
+  reference <- reference[1]
+  
+  my_formula <- as.formula(str_glue("{y} ~ {x} + {z}"))
+  
+  fit <- svyglm(my_formula, design = ensanut_diseno, family = quasipoisson) 
+  
+  fit_emm <- fit |>
+    emmeans(as.formula(str_glue("trt.vs.ctrl ~ {x}")), var = x, type = "response", 
+            data = ensanut18_4analysis) 
+
+  contrasts_emm <- fit_emm |>
+    pluck("contrasts") |>
+    broom::tidy(conf.int = T) |>
+    select(var = term, contrast, PR = ratio, conf.low, 
+           conf.high, `p value` = ends_with("p.value")) 
+  
+  model_estimates <- tibble(var = x, 
+         contrast = c(str_glue("{reference} (REF)"), 
+                      str_extract(contrasts_emm |> pull(contrast), "^[^/]+")),
+         PR = c(1, contrasts_emm |> pull(PR)), 
+         conf.low = c(NA, contrasts_emm |> pull(conf.low)), 
+         conf.high = c(NA, contrasts_emm |> pull(conf.high)), 
+         `p value` = c(NA, contrasts_emm |> pull(`p value`)))
+  
+    adj_prop <- fit_emm |>
+    pluck("emmeans") |>
+    as_tibble() |>
+    mutate(var = x, 
+           prop = rate * 100, 
+           conf_low = asymp.LCL * 100, 
+           conf_high = asymp.UCL * 100) |>
+    select(var, term = !!sym(x), prop, conf_low, conf_high)
+
+  list(adj_prop = adj_prop, model_estimates = model_estimates)
+
+}
+  
+```
+
+```{r}
+adj_estimates_fun("region", "disc_visual_severa_num", "edad")
+
+var_sociodem <- names(ensanut18_4analysis)[c(6, 8, 14:19)]
+
+
+socio_dem <- foreach(i = var_sociodem, 
+                     .packages = c("tidyverse", "emmeans", 
+                                   "survey", "srvyr")) %dopar% {
+  adj_estimates_fun(i, "disc_visual_severa_num", "edad")
+
+}
+
+```
+
+```{r}
+var_chr_dis <- names(ensanut18_4analysis)[c(34, 44, 24, 25, 27, 35:37)]
+
+chr_dis <- foreach(i = var_chr_dis, 
+                   .packages = c("tidyverse", "emmeans", 
+                                   "survey", "srvyr")) %dopar% {
+  adj_estimates_fun(i, "disc_visual_severa_num", "edad")
+
+}
+```
+
+
+```{r}
+socio_dem_coefs <- map(socio_dem, "model_estimates") |>
+  bind_rows()
+
+write_csv(socio_dem_coefs, here("results/", "socio_dem_coefs_age_adj.csv"))
+
+### Figure 1. Sociodemographic predictor of Severe Visual Impairment among the Mexican population.
+socio_dem_coefs |>
+  rename(term = contrast) |>
+  mutate(term = case_when(var == "l_indigena" & term == "No (REF)" ~ "Doesn't speak indigenous language (REF)", 
+                          var == "l_indigena" & term == "Yes" ~ "Speaks indigenous language", 
+                          var == "insurance" & term == "No insurance (REF)" ~ "Uninsured (REF)", 
+                          var == "insurance" & term == "Insurance" ~ "Insured",
+                          var == "work_pwk" & term == "Yes (REF)" ~ "Past-week employed (REF)", 
+                          var == "work_pwk" & term == "No" ~ "Past-week unemployed",
+                          T ~ term), 
+         term =  factor(term),  
+         orden = seq(1, length(var), 1),
+         color = factor(c(rep(1, 2), rep(2, 4), rep(3, 2), rep(4, 4), 
+                   rep(5, 4), rep(6, 2), rep(7, 2), rep(8, 2)), 
+                   labels = c("Sex", "Region", "Urbanicity", "Education", 
+                              "SES", "Insurance", "Indigenous", "PW employment"))) |>
+  ggplot(aes(y = reorder(ordered(term, levels = levels(term)), desc(orden)), 
+             x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
+  geom_point(size = 5, shape = "diamond") +
+  geom_errorbarh(height = 0.3) + 
+  scale_x_continuous(limits = c(0.2, 8.00), breaks = c(0.7, seq(1.0, 8.0, 1.0)), name = "Prevalence Ratio")  +
+  geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
+  ggthemes::theme_calc() +
+  theme(legend.position = "left", 
+        legend.title = element_blank(), 
+        plot.title = element_text(size = 14), 
+        text = element_text(size = 12)) +
+  labs(y = "", 
+       title = "")
+
+
+# ggsave(here("results/", "forestplot_age_adj.pdf"), width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot_age_adj.jpeg"), width = 12, height = 8, units = "in", dpi = 1800)
+
+```
+
+```{r}
+chr_dis_coef <- map(chr_dis, "model_estimates") |>
+  bind_rows() 
+
+write_csv(chr_dis_coef, here("results/", "chr_dis_coef_age_adj.csv"))
+
+
+### Figure 2. Health predictors of Severe Visual Impairment among the Mexican population.
+chr_dis_coef |>
+  mutate(contrast = str_trim(contrast, side = "right")) |>
+  rename(term = contrast) |>
+  mutate(term = case_when(var == "obesidad" & term == "No (REF)" ~ "No obesity (REF)", 
+                          var == "obesidad" & term == "Yes" ~ "Obesity", 
+                          var == "diab_dv" & term == "No (REF)" ~ "No VI due to diabetes (REF)", 
+                          var == "diab_dv" & term == "Yes" ~ "VI due to diabetes",
+                          var == "diab_perd_vsn" & term == "No (REF)" ~ "No vision loss due to diabetes (REF)", 
+                          var == "diab_perd_vsn" & term == "Yes" ~ "Vision loss due to diabetes",
+                          var == "hta_retina" & term == "No (REF)" ~ "No retinal damage due to HTN (REF)", 
+                          var == "hta_retina" & term == "Yes" ~ "Retinal damage due to HTN",
+                          var == "cardio_dis" & term == "No CVD (REF)" ~ "No CVD (REF)", 
+                          var == "cardio_dis" & term == "Yes" ~ "CVD",
+                          var == "kidney_dis" & term == "No (REF)" ~ "No kidney disease (REF)", 
+                          var == "kidney_dis" & term == "Yes" ~ "Kidney disease",
+                          var == "dyslipidemia" & term == "No (REF)" ~ "No dyslipidemia (REF)", 
+                          var == "dyslipidemia" & term == "Yes" ~ "Dyslipidemia",
+                          T ~ term), 
+         term =  factor(term),  
+         orden = seq(1, length(var), 1),
+         color = factor(c(rep(1, 2), rep(2, 4), rep(3, 2), rep(4, 2), rep(5, 2), rep(6, 2), 
+                   rep(7, 2), rep(8, 2)), 
+                   labels = c("Obesity", "Diabetes and HTN", "VI due to diabetes", 
+                              "Vission loss due to diabetes", "Retinal damage due to HTN", 
+                              "Cardiovasular disease (CVD)", 
+                              "Kidney disease", "Dyslipidemia"))) |>
+  ggplot(aes(y = reorder(ordered(term, levels = levels(term)), desc(orden)), 
+             x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
+  geom_point(size = 5, shape = "diamond") +
+  geom_errorbarh(height = 0.3) + 
+  scale_x_continuous(limits = c(0.01, 8.00), breaks = c(0.7, seq(1.0, 8.0, 1.0)), name = "Prevalence Ratio")  +
+  geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
+  ggthemes::theme_calc() +
+  theme(legend.position = "left", 
+        legend.title = element_blank(), 
+        plot.title = element_text(size = 14), 
+        text = element_text(size = 12)) +
+  labs(y = "", 
+       title = "")
+
+
+# ggsave(here("results/", "forestplot2_age_adj.pdf"), width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot2_age_adj.jpeg"), width = 12, height = 8, units = "in", dpi = 1800)
+
+```
+
+```{r}
+table_1 |>
+  mutate(var = factor(var), 
+         level = factor(level)) |>
+  mutate(var = recode(var, age = "Age", 
+                      age_cat = "Age group", 
+                      sexo = "Gender", 
+                      region = "Region",
+                      urbanicity = "Urbanicity", 
+                      education = "Education", 
+                      ses = "SES", 
+                      insurance = "Insurance", 
+                      l_indigena = "Speaks indigenous lenguage", 
+                      work_pwk = "Past-week employment", 
+                      diab_hbp = "Diabetes and/or hypertension", 
+                      diab_dv = "Visual disability due to diabetes", 
+                      diab_perd_vsn = "Lost vision due to diabetes", 
+                      hta_retina = "Retinal damage due to HBP", 
+                      usa_lentes = "Use glasses", 
+                      cesd = "Depressive symptomatology", 
+                      obesidad = "Obesity", 
+                      cardio_dis = "Cardiovascular diseases", 
+                      kidney_dis = "Kidney disease", 
+                      dyslipidemia = "Dyslipidemia", 
+                      smk_cat = "Type of smoker", 
+                      alcohol = "Alcohol use", 
+                      binge_drnk = "Binge drinking", 
+                      accidente = "Work accident", 
+                      dis_accidente = "Disability due to work accident")) |>
+  flextable::as_grouped_data(groups = c("var")) |>
+  flextable::as_flextable(max_row = Inf, show_coltype = F, spread_first_col = TRUE, hide_grouplabel = TRUE, groups_to = "titles") |>
+  flextable::style(i = ~!is.na(var),
+        pr_p = officer::fp_par(text.align = "left", padding = 5, line_spacing = 1.5)) |>
+  flextable::prepend_chunks(i = ~is.na(var), j = 1, flextable::as_chunk("\t")) |>
+  flextable::set_header_labels(values = list(level = "", 
+                                             Overall = "N", 
+                                             `n Without SVD` = "N", 
+                                             `w % Without SVD` = "w %", 
+                                             `n With SVD` = "N", 
+                                             `w % With SVD` = "w %")) |>
+  flextable::add_header_row(values = c("", "Sample", "Without Severe Visual Disability", "With Severe Visual Disability"), 
+                            colwidths = c(1, 2, 2, 2), 
+                            top = T) |>
+  flextable::autofit()
+```
+
