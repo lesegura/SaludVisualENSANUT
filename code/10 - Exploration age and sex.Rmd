@@ -1,0 +1,342 @@
+---
+title: "Exploracion 6 estratos sexo y edad"
+author: "Luis Segura"
+date: "2024-11-12"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+```
+
+
+```{r}
+### leemos la base de datos
+load(here("data/", "ensanut18_4analysis.RData"))
+```
+
+
+```{r}
+ensanut_diseno <- ensanut18_4analysis |>
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+```
+
+Con base en los comentarios de coautores, reanalizamos los datos para explorar la prevalencia y brechas en discapacidad visual severa en hombres y mujeres de diferentes grupos de edad (20 - 39, 40-59 y 60+) . Ademas, exploramos estas brechas en subgrupos con vulnerables definidos por los indicadores de: estratos socioeconomico, educacion, urbanidad, ascendencia indigena, empleo, region y aseguranza. Finalmente, tambien exploramos las brechas entre aquellos que padecen hipertension solamente, diabetes solamente y diabetes e hipertension.
+
+Mostramos los totales (n) sin ponderar y las prevalencias (prop) ponderadas de acuerdo al diseno muestral de la ENSANUT 2018.
+
+
+# Prevalencias de discapacidad visual severa por grupos de edad & genero {.tabset}
+## Table
+
+```{r}
+table_age_sexo_n <- ensanut18_4analysis |>
+  group_by(sexo, age_cat, disc_visual_severa) |>
+  count() |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  select(-disc_visual_severa)
+
+table_age_sexo_pr <- ensanut_diseno |>
+  group_by(sexo, age_cat, disc_visual_severa) |>
+  summarise(prop = survey_mean()) |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  select(-c(prop_se, disc_visual_severa))
+
+table_age_sexo <- table_age_sexo_n |>
+  left_join(table_age_sexo_pr, by = c("sexo", "age_cat")) |>
+  mutate(prop = prop * 100) |>
+  rename(`age category` = age_cat, 
+         `sex` = sexo)
+
+table_age_sexo |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+```
+
+## Plot
+```{r}
+table_age_sexo |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = "red"), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_age_sexo$prop + 1)), 
+                     breaks = seq(0, max(table_age_sexo$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_age_sexo$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI by age group and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "none")
+
+```
+
+
+# Prevalencias de discapacidad visual severa en subgrupos vulnerables por edad y genero
+
+## Socioeconomic status{.tabset}
+### Table
+
+```{r}
+## creamos una funcion para estimar las tablas de las prevalencias y no tener que repetir tanto codigo
+my_fun <- function(x){
+  
+  table_n <- ensanut18_4analysis |>
+    group_by(sexo, age_cat, !!sym(x), disc_visual_severa) |>
+    count() |>
+    ungroup() |>
+    filter(disc_visual_severa == "Yes") |>
+    select(-disc_visual_severa)
+  
+  table_pr <- ensanut_diseno |>
+    group_by(sexo, age_cat, !!sym(x), disc_visual_severa) |>
+    summarise(prop = survey_mean()) |>
+    ungroup() |>
+    filter(disc_visual_severa == "Yes") |>
+    select(-c(prop_se, disc_visual_severa))
+  
+  table <- table_n |>
+    left_join(table_pr, by = c("sexo", "age_cat", x)) |>
+    mutate(prop = prop * 100) |>
+    rename(`age category` = age_cat, 
+           `sex` = sexo) 
+  
+  return(table)
+  
+}
+
+table_1 <- my_fun("ses")
+
+
+table_1 |>
+  rename(`socioeconomic status` = ses) |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+```
+
+### Plot
+```{r}
+table_1 |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = ses), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_1$prop + 1)), 
+                     breaks = seq(0, max(table_1$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_1$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI among ses by age group and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "bottom")
+
+```
+
+## Education{.tabset}
+### Table
+
+```{r}
+table_2 <- my_fun("education")
+
+table_2 |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+```
+
+### Plot
+```{r, fig.height=6, fig.width=14}
+table_2 |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = education), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_2$prop + 1)), 
+                     breaks = seq(0, max(table_2$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_2$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI among educational attainment groups by age and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "bottom")
+```
+
+
+## Urbanicity{.tabset}
+### Table
+
+```{r}
+table_3 <- my_fun("urbanicity")
+
+table_3 |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+```
+
+### Plot
+```{r}
+table_3 |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = urbanicity), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_3$prop + 1)), 
+                     breaks = seq(0, max(table_3$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_3$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI among urban/rural living by age and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "bottom")
+```
+
+## Speaks Indigenous Language{.tabset}
+### Table
+
+```{r}
+
+table_4 <- my_fun("l_indigena") 
+
+table_4 |>
+  rename(`speaks indigenous language` = l_indigena) |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+```
+
+### Plot
+```{r}
+table_4 |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = l_indigena), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_4$prop + 1)), 
+                     breaks = seq(0, max(table_4$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_4$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI among indigenous ancestry by age and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "bottom")
+```
+
+## Employment{.tabset}
+### Table
+
+```{r}
+table_5 <- my_fun("work_pwk")
+
+table_5 |>
+  rename(`past-week employment` = work_pwk) |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+```
+
+### Plot
+```{r}
+table_5 |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = work_pwk), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_5$prop + 1)), 
+                     breaks = seq(0, max(table_5$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_5$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI among employment status by age and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "bottom")
+```
+
+
+## Region{.tabset}
+### Table
+```{r}
+table_6 <- my_fun("region")
+
+table_6 |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+
+```
+
+### Plot
+```{r}
+table_6 |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = region), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_6$prop + 1)), 
+                     breaks = seq(0, max(table_6$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_6$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI among regions by age and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "bottom")
+```
+
+## Insurance{.tabset}
+### Table
+```{r}
+table_7 <- my_fun("insurance")
+
+table_7 |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+```
+
+### Plot
+```{r}
+table_7 |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = insurance), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_7$prop + 1)), 
+                     breaks = seq(0, max(table_7$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_7$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI among insurance status by age and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "bottom")
+```
+
+## Diabetes & Hypertension{.tabset}
+### Table
+
+```{r}
+table_8 <- my_fun("diab_hbp")
+
+table_8 |>
+  rename(`diabetes and/or hypertension` = diab_hbp) |>
+  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  DT::datatable(filter = "top") 
+
+```
+
+### Plot
+```{r, fig.height=6, fig.width=14}
+table_8 |>
+  mutate(sex_age = interaction(sex, `age category`, sep = " ")) |>
+  ggplot(aes(x = prop, y = sex_age)) +
+  geom_line(aes(group = sex_age)) +
+  geom_point(aes(color = diab_hbp), size = 7) +
+  scale_x_continuous(limits = c(0, max(table_8$prop + 1)), 
+                     breaks = seq(0, max(table_8$prop + 1), 1), 
+                     labels = paste0(seq(0, max(table_8$prop + 1), 1), "%")) +
+  labs(y = "", x = "", title = "Prevalence of SVI among diabetes/hypertension status by age and sex") +
+  cowplot::theme_minimal_hgrid() +
+  theme(legend.position = "bottom")
+```
