@@ -36,6 +36,7 @@ ensanut_diseno <- ensanut18_4analysis |>
                    nest = T)
 ```
 
+
 Con base en los comentarios de coautores, reanalizamos los datos para explorar la prevalencia y brechas en discapacidad visual severa en hombres y mujeres de diferentes grupos de edad (20 - 39, 40-59 y 60+) . Ademas, exploramos estas brechas en subgrupos con vulnerables definidos por los indicadores de: estratos socioeconomico, educacion, urbanidad, ascendencia indigena, empleo, region y aseguranza. Finalmente, tambien exploramos las brechas entre aquellos que padecen hipertension solamente, diabetes solamente y diabetes e hipertension.
 
 Mostramos los totales (n) sin ponderar y las prevalencias (prop) ponderadas de acuerdo al diseno muestral de la ENSANUT 2018.
@@ -54,19 +55,23 @@ table_age_sexo_n <- ensanut18_4analysis |>
 
 table_age_sexo_pr <- ensanut_diseno |>
   group_by(sexo, age_cat, disc_visual_severa) |>
-  summarise(prop = survey_mean()) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
   ungroup() |>
   filter(disc_visual_severa == "Yes") |>
-  select(-c(prop_se, disc_visual_severa))
+  select(-c(disc_visual_severa))
 
 table_age_sexo <- table_age_sexo_n |>
   left_join(table_age_sexo_pr, by = c("sexo", "age_cat")) |>
-  mutate(prop = prop * 100) |>
+  mutate(prop = prop * 100, 
+         prop_low = prop_low * 100, 
+         prop_upp = prop_upp * 100) |>
   rename(`age category` = age_cat, 
          `sex` = sexo)
 
 table_age_sexo |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 ```
@@ -106,14 +111,16 @@ my_fun <- function(x){
   
   table_pr <- ensanut_diseno |>
     group_by(sexo, age_cat, !!sym(x), disc_visual_severa) |>
-    summarise(prop = survey_mean()) |>
+    summarise(prop = survey_mean(vartype = "ci")) |>
     ungroup() |>
     filter(disc_visual_severa == "Yes") |>
-    select(-c(prop_se, disc_visual_severa))
+    select(-c(disc_visual_severa))
   
   table <- table_n |>
     left_join(table_pr, by = c("sexo", "age_cat", x)) |>
-    mutate(prop = prop * 100) |>
+    mutate(prop = prop * 100, 
+           prop_low = prop_low * 100, 
+           prop_upp = prop_upp * 100) |>
     rename(`age category` = age_cat, 
            `sex` = sexo) 
   
@@ -126,7 +133,9 @@ table_1 <- my_fun("ses")
 
 table_1 |>
   rename(`socioeconomic status` = ses) |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 ```
@@ -154,7 +163,9 @@ table_1 |>
 table_2 <- my_fun("education")
 
 table_2 |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 ```
@@ -182,7 +193,9 @@ table_2 |>
 table_3 <- my_fun("urbanicity")
 
 table_3 |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 ```
@@ -211,7 +224,9 @@ table_4 <- my_fun("l_indigena")
 
 table_4 |>
   rename(`speaks indigenous language` = l_indigena) |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 ```
@@ -239,7 +254,9 @@ table_5 <- my_fun("work_pwk")
 
 table_5 |>
   rename(`past-week employment` = work_pwk) |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 ```
@@ -266,7 +283,9 @@ table_5 |>
 table_6 <- my_fun("region")
 
 table_6 |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 
@@ -293,7 +312,9 @@ table_6 |>
 table_7 <- my_fun("insurance")
 
 table_7 |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 ```
@@ -321,7 +342,9 @@ table_8 <- my_fun("diab_hbp")
 
 table_8 |>
   rename(`diabetes and/or hypertension` = diab_hbp) |>
-  mutate(prop = str_glue("{round(prop, 2)}%")) |>
+  mutate(prop = str_glue("{round(prop, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low, 2)}; {round(prop_upp, 2)})")) |>
+  select(-c(prop_low, prop_upp)) |>
   DT::datatable(filter = "top") 
 
 ```
