@@ -97,10 +97,10 @@ svi_prop <- svyglm(disc_visual_severa_num ~ age_cat,
 
 The age adjusted prevalence of SVI is `r svi_prop |> pull(rate) |> mutate(rate * 100)`%
 ```{r}
-var_sociodem <- names(ensanut18_4analysis)[c(6, 8, 14:19)]
+var_char <- names(ensanut18_4analysis)[c(6, 8, 14:19, 44)]
 
 
-socio_dem <- foreach(i = var_sociodem, 
+tab_estimates <- foreach(i = var_char, 
                      .packages = c("tidyverse", "emmeans", 
                                    "survey", "srvyr")) %dopar% {
   adj_estimates_fun(i, "disc_visual_severa_num", "age_cat")
@@ -109,29 +109,15 @@ socio_dem <- foreach(i = var_sociodem,
 
 ```
 
-```{r}
-var_chr_dis <- names(ensanut18_4analysis)[c(34, 44, 35:37)]
-
-chr_dis <- foreach(i = var_chr_dis, 
-                   .packages = c("tidyverse", "emmeans", 
-                                   "survey", "srvyr")) %dopar% {
-  adj_estimates_fun(i, "disc_visual_severa_num", "age_cat")
-
-}
-
-# save(socio_dem, chr_dis, file = here("data/", "age_cat_adjusted_estimates.RData"))
-
-```
-
 
 ```{r}
-socio_dem_coefs <- map(socio_dem, "model_estimates") |>
+tab_est_coefs <- map(tab_estimates, "model_estimates") |>
   bind_rows()
 
-# write_csv(socio_dem_coefs, here("results/", "socio_dem_coefs_age_cat_adj.csv"))
+# write_csv(tab_est_coefs, here("results/", "tab_est_coefs_age_cat_adj.csv"))
 
 ### Figure 1. Sociodemographic predictor of Severe Visual Impairment among the Mexican population.
-socio_dem_coefs |>
+tab_est_coefs |>
   rename(term = contrast) |>
   mutate(term = case_when(var == "l_indigena" & term == "No (REF)" ~ "Doesn't speak indigenous language (REF)", 
                           var == "l_indigena" & term == "Yes" ~ "Speaks indigenous language", 
@@ -143,73 +129,28 @@ socio_dem_coefs |>
          term =  factor(term),  
          orden = seq(1, length(var), 1),
          color = factor(c(rep(1, 2), rep(2, 4), rep(3, 2), rep(4, 4), 
-                   rep(5, 4), rep(6, 2), rep(7, 2), rep(8, 2)), 
+                   rep(5, 4), rep(6, 2), rep(7, 2), rep(8, 2), rep(9, 4)), 
                    labels = c("Sex", "Region", "Urbanicity", "Education", 
-                              "SES", "Insurance", "Indigenous", "PW employment"))) |>
-  ggplot(aes(y = reorder(ordered(term, levels = levels(term)), desc(orden)), 
+                              "SES", "Insurance", "Indigenous", "PW employment", 
+                              "Diabetes and HTN"))) |>
+  ggplot(aes(y = reorder(ordered(interaction(term, color, sep = "!")), desc(orden)), 
              x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
   geom_point(size = 5, shape = "diamond") +
   geom_errorbarh(height = 0.3) + 
-  scale_x_continuous(limits = c(0.2, 8.00), breaks = c(0.7, seq(1.0, 8.0, 1.0)), name = "Prevalence Ratio (95% CI)")  +
+  scale_x_continuous(limits = c(0.2, 5.0), breaks = c(0.7, seq(1.0, 5.0, 1.0)), name = "Prevalence Ratio (95% CI)")  +
+  scale_y_discrete(guide = ggh4x::guide_axis_nested(delim = "!")) +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
-  theme(legend.position = "left", 
+  theme(legend.position = "none", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 14), 
         text = element_text(size = 12)) +
-  labs(y = "", 
+  labs(y = "",
        title = "")
 
 
-# ggsave(here("results/", "forestplot_age_cat_adj.pdf"), width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
-# ggsave(here("results/", "forestplot_age_cat_adj.jpeg"), width = 12, height = 6, units = "in", dpi = 1800)
-
-```
-
-```{r}
-chr_dis_coef <- map(chr_dis, "model_estimates") |>
-  bind_rows() 
-
-# write_csv(chr_dis_coef, here("results/", "chr_dis_coef_age_cat_adj.csv"))
-
-
-### Figure 2. Health predictors of Severe Visual Impairment among the Mexican population.
-chr_dis_coef |>
-  mutate(contrast = str_trim(contrast, side = "right")) |>
-  rename(term = contrast) |>
-  mutate(term = case_when(var == "obesidad" & term == "No (REF)" ~ "No obesity (REF)", 
-                          var == "obesidad" & term == "Yes" ~ "Obesity", 
-                          var == "cardio_dis" & term == "No CVD (REF)" ~ "No CVD (REF)", 
-                          var == "cardio_dis" & term == "Yes" ~ "CVD",
-                          var == "kidney_dis" & term == "No (REF)" ~ "No kidney disease (REF)", 
-                          var == "kidney_dis" & term == "Yes" ~ "Kidney disease",
-                          var == "dyslipidemia" & term == "No (REF)" ~ "No dyslipidemia (REF)", 
-                          var == "dyslipidemia" & term == "Yes" ~ "Dyslipidemia",
-                          T ~ term), 
-         term =  factor(term),  
-         orden = seq(1, length(var), 1),
-         color = factor(c(rep(1, 2), rep(2, 4), rep(3, 2), 
-                   rep(4, 2), rep(5, 2)), 
-                   labels = c("Obesity", "Diabetes and HTN",
-                              "Cardiovasular disease (CVD)", 
-                              "Kidney disease", "Dyslipidemia"))) |>
-  ggplot(aes(y = reorder(ordered(term, levels = levels(term)), desc(orden)), 
-             x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
-  geom_point(size = 5, shape = "diamond") +
-  geom_errorbarh(height = 0.3) + 
-  scale_x_continuous(limits = c(0.01, 8.00), breaks = c(0.7, seq(1.0, 8.0, 1.0)), name = "Prevalence Ratio (95% CI)")  +
-  geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
-  ggthemes::theme_calc() +
-  theme(legend.position = "left", 
-        legend.title = element_blank(), 
-        plot.title = element_text(size = 14), 
-        text = element_text(size = 12)) +
-  labs(y = "", 
-       title = "")
-
-
-ggsave(here("results/", "forestplot2_age_cat_adj_v2.pdf"), width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
-ggsave(here("results/", "forestplot2_age_cat_adj_v2.jpeg"), width = 12, height = 6, units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot_age_cat_adj_v2.pdf"), width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot_age_cat_adj_v2.jpeg"), width = 12, height = 6, units = "in", dpi = 1800)
 
 ```
 
