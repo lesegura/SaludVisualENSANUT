@@ -30,29 +30,23 @@ getDoParName()
 
 ```
 
-Para crear las proporciones ajustadas por edad de la tabla 1 hay cargar el archivo "age_adjusted_estimates.RData" que contiene los objetos `socio_dem` y `chr_dis`.
+Para crear las proporciones ajustadas por edad de la tabla 1 hay cargar el archivo "age_adjusted_estimates_v2.RData" que contiene los objetos `socio_dem` y `chr_dis`.
 
 ```{r}
-load(here("data/", "age_cat_adjusted_estimates.RData"))
+load(here("data/", "age_cat_adjusted_estimates_v2.RData"))
 ```
 
 ```{r}
-socio_dem_pr <- map(socio_dem, "adj_prop") |>
+table_1 <- map(tab_estimates, "adj_prop") |>
   bind_rows()
 
-chr_dis_pr <- map(chr_dis, "adj_prop") |>
-  bind_rows()
-
-table_1 <- bind_rows(socio_dem_pr, chr_dis_pr) |>
+table_1 <- table_1 |>
   rename(level = term, 
          `w % With SVD` = prop) |>
-  mutate(`w % With SVD` = round(`w % With SVD`, 2), 
-         `w % Without SVD` = 100 - `w % With SVD`, 
+  mutate(`w % With SVD` = round(`w % With SVD`, 1), 
          var = factor(var), 
          level = factor(level)) |>
-  mutate(`w % With SVD` = str_glue("{`w % With SVD`}%"), 
-         `w % Without SVD` = str_glue("{`w % Without SVD`}%")) |>
-  relocate(`w % Without SVD`, .before = `w % With SVD`) |>
+  mutate(`w % With SVD` = str_glue("{`w % With SVD`}%")) |>
   select(-c(conf_low, conf_high))
 
 ```
@@ -81,10 +75,9 @@ table_1 |>
         pr_p = officer::fp_par(text.align = "left", padding = 5, line_spacing = 1.5)) |>
   flextable::prepend_chunks(i = ~is.na(var), j = 1, flextable::as_chunk("\t")) |>
   flextable::set_header_labels(values = list(level = "", 
-                                             `w % Without SVD` = "w %", 
                                              `w % With SVD` = "w %")) |>
-  flextable::add_header_row(values = c("", "Without Severe Visual Disability", "With Severe Visual Disability"), 
-                            colwidths = c(1, 1, 1), 
+  flextable::add_header_row(values = c("", "With Severe Visual Disability"), 
+                            colwidths = c(1, 1), 
                             top = T) |>
   flextable::autofit()
 ```

@@ -107,8 +107,8 @@ ensanut18_4analysis <- ensanut18_all |>
                                     p13_11 == 1 ~ 2), labels = c("Never", "No", "Yes")), 
          work_pwk = factor(case_when(trabajo == 2 ~ 1, 
                                      trabajo == 1 ~ 0), labels = c("Yes", "No")), 
-         insurance = factor(ifelse(p3_9_01 == 1 | p3_9_02 == 1 | p3_9_03 == 1 | p3_9_04 == 1 |
-                              p3_9_05 == 1 | p3_9_06 == 1 | p3_9_07 == 1 | p3_9_08 == 1, 1, 0), labels = c("No insurance", "Insurance")), 
+         insurance = factor(ifelse(p3_10_99 == 1, NA, 
+                                   ifelse(p3_10_11 == 1, 0, 1)), labels = c("No insurance", "Insurance")), 
          work_type = factor(tipo_trabajo, labels = c("empleada(o)", "obrera(o)", "jornalera(o) o peona(ón)", 
                                               "trabajadora(or) por su cuenta", "patrona(ón) o empleadora(or)", 
                                               "trabajadora(or) sin pago", "otro")), 

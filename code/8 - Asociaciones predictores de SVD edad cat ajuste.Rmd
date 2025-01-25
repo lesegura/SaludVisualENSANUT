@@ -105,7 +105,9 @@ tab_estimates <- foreach(i = var_char,
                                    "survey", "srvyr")) %dopar% {
   adj_estimates_fun(i, "disc_visual_severa_num", "age_cat")
 
-}
+                                   }
+
+# save(tab_estimates, file = here("data/", "age_adjusted_estimates_v2.RData"))
 
 ```
 

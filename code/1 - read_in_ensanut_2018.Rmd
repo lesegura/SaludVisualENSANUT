@@ -36,7 +36,7 @@ Base de datos Salud Adultos
 - sexo: 1 = Hombre; 2 = Mujer
 - edad: continua
 - region: 1 = Norte; 2 = Centro; 3 = CDMX; 4 = Sur
-- estrato: 1 = Bajo, Medio bajo, Medio alto, Alto
+- estrato: 1 = Bajo, Medio bajo, Medio alto, Alto (https://www.inegi.org.mx/rnm/index.php/catalog/590/data-dictionary/F41)
 - dominio: 1 = Urbano, 2 = Rural
 - p3_1: 1 = Si diabetes, 2 = Si, diabetes gestacional, 3 = No. Recodificar 1 y 2-3 = 0.
 
@@ -129,20 +129,20 @@ Variables a seleccionar de la base de datos de Residentes:
          10 = Licenciatura o profesional
          11 = Maestria
          12 = Doctorado
-- p3_9_01: 0 = No, 1 = Se atiende en IMSS
-- p3_9_02: 0 = No, 1 = Se atiende en ISSSTE
-- p3_9_03: 0 = No, 1 = Se atiende en ISSSTE Estatal
-- p3_9_04: 0 = No, 1 = Se atiende en PEMEX
-- p3_9_05: 0 = No, 1 = Se atiende en Defensa
-- p3_9_06: 0 = No, 1 = Se atiende en Marina
-- p3_9_07: 0 = No, 1 = Se atiende en Centro de Salud u Hospital de la SSA
-- p3_9_08: 0 = No, 1 = Se atiende en IMSS PROSPERA (antes Oportunidades)
-- p3_9_09: 0 = No, 1 = Se atiende en Consultorios dependientes de farmacias
-- p3_9_10: 0 = No, 1 = Se atiende en Consultorio, clínica u hospital privado
-- p3_9_11: 0 = No, 1 = Se automedica
-- p3_9_77: 0 = No, 1 = Otro lugar (especifica)
-- p3_9_12: 0 = No, 1 = No se atiende
-- p3_9_99: 0 = No, 1 = No sabe
+- p3_10_01: ¿(NOMBRE) tiene derecho o acceso a servicios médicos…1del Seguro Social (IMSS)? 0 = No, 1 = Si
+- p3_10_02: ... ISSSTE?
+- p3_10_03: ... ISSSTE Estatal?
+- p3_10_04: ... Pemex?
+- p3_10_05: ... Defensa?
+- p3_10_06: ... Marina?
+- p3_10_07: ... Seguro Popular o Seguro Medico Siglo XXI?
+- p3_10_08: ... IMSS Prospera?
+- p3_10_09: ... seguro privado de gastos medicos?
+- p3_10_10: ... de otra institucion?
+- p3_10_11: ... no esta afiliado o inscrito a servicios medicos?
+- p3_10_99: ... no sabe
+- p3_10_opc1: ... primera o unica opcion
+- p3_10_opc2: ... segunda opcion elegida
 - p3_11: 1 = Si habla lengua indigena, 2 = No
 - p3_21: 1 = Si trabajo al menos una hora la semanada pasada, 2 = No
 - p3_23: 1 = empleado, 2 = obrero, 3 = jornalero o peon, 4 = trabahador por su cuenta (no contrata trabajadores), 
@@ -172,7 +172,8 @@ Variables a seleccionar de la base de datos de Residentes:
          
 ```{r}
 residentes <- residentes |>
-  select(upm:numren, p3_9_01:p3_9_99, l_indigena = p3_11, trabajo = p3_21, tipo_trabajo = p3_23, p3_26_1, p3_26_2, p5_1_01:p5_1_19, nivel) |> 
+  select(upm:numren, p3_10_01:p3_10_99, p3_10_opc1, p3_10_opc2, p3_9_01:p3_9_99, l_indigena = p3_11, 
+         trabajo = p3_21, tipo_trabajo = p3_23, p3_26_1, p3_26_2, p5_1_01:p5_1_19, nivel) |> 
   mutate(hogar = as.numeric(hogar))
 ```
 
@@ -194,13 +195,27 @@ hogares <- hogares |>
   select(upm:hogar, p7_2_1, p7_2_2, p7_2_3)
 ```
 
+Importando el indicador de SES creado por el INSP
+- llave
+- indice1
+- nsef: 1 = bajo; 2 = medio; 3 = alto
+- nse5f: quintiles de dudosa procedencia
+
+```{r}
+ses_insp <- read_dta(here("data/", "ENSANUT2018_NSE.dta")) |>
+  janitor::clean_names() |>
+  mutate(upm = str_pad(upm, width = 5, pad = "0"), 
+         viv_sel = str_pad(viv_sel, width = 2, pad = "0"))
+
+```
+
 
 Uniendo archivo de hogares y adultos usando las variables upm, viv_sel, hogar y numren. Guardamos la base de datos entera como ensanut18_all.RData
 ```{r}
 ensanut18_all <- adultos |>
   left_join(residentes, by = c("upm", "viv_sel", "hogar", "numren")) |>
-  left_join(hogares, by = c("upm", "viv_sel", "hogar"))
+  left_join(hogares, by = c("upm", "viv_sel", "hogar")) |>
+  left_join(ses_insp, by = c("upm", "viv_sel", "hogar"))
 
 save(ensanut18_all, file = here("data/", "ensanut18_all.RData"))
 ```
-

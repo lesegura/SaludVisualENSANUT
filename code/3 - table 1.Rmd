@@ -86,7 +86,7 @@ fun_desc <- function(x) {
 
 ```{r}
 ### Corremos la función en un loop para cada variable dentro del objeto `nombres_var`
-tab_list <- foreach(i = nombres_var) %dopar% {
+tab_list <- foreach(i = nombres_var, .packages = c("tidyverse", "survey", "srvyr")) %dopar% {
   fun_desc(i)
 }
 
