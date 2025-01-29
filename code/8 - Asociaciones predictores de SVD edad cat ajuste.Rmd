@@ -45,7 +45,7 @@ ensanut_diseno <- ensanut18_4analysis |>
 adj_estimates_fun <- function(x, y, z){
   
   reference <- ensanut18_4analysis |>
-    pull(!!sym(x)) |> 
+    pull("!!sym(x)") |> 
     levels()
   
   reference <- reference[1]
@@ -84,7 +84,8 @@ adj_estimates_fun <- function(x, y, z){
   list(adj_prop = adj_prop, model_estimates = model_estimates)
 
 }
-  
+
+
 ```
 
 ```{r}
@@ -104,11 +105,12 @@ tab_estimates <- foreach(i = var_char,
                      .packages = c("tidyverse", "emmeans", 
                                    "survey", "srvyr")) %dopar% {
   adj_estimates_fun(i, "disc_visual_severa_num", "age_cat")
-
-                                   }
+}
 
 # save(tab_estimates, file = here("data/", "age_adjusted_estimates_v2.RData"))
 
+
+adj_estimates_fun("diab_hbp", "disc_visual_severa_num", "age_cat")
 ```
 
 
@@ -121,20 +123,25 @@ tab_est_coefs <- map(tab_estimates, "model_estimates") |>
 ### Figure 1. Sociodemographic predictor of Severe Visual Impairment among the Mexican population.
 tab_est_coefs |>
   rename(term = contrast) |>
+  mutate(term = str_trim(term, side = "both")) |>
   mutate(term = case_when(var == "l_indigena" & term == "No (REF)" ~ "Doesn't speak indigenous language (REF)", 
                           var == "l_indigena" & term == "Yes" ~ "Speaks indigenous language", 
                           var == "insurance" & term == "No insurance (REF)" ~ "Uninsured (REF)", 
                           var == "insurance" & term == "Insurance" ~ "Insured",
                           var == "work_pwk" & term == "Yes (REF)" ~ "Past-week employed (REF)", 
                           var == "work_pwk" & term == "No" ~ "Past-week unemployed",
+                          var == "diab_hbp" & term == "No diabetes or HTN (REF)" ~ "Neither diabetes nor hypertension (REF)", 
+                          var == "diab_hbp" & term == "Diabetes no HTN" ~ "Diabetes / no hypertension",
+                          var == "diab_hbp" & term == "HTN no diabetes" ~ "Hypertension / no diabetes",
+                          var == "diab_hbp" & term == "Both diabetes & HTN" ~ "Diabetes & hypertension",
                           T ~ term), 
          term =  factor(term),  
          orden = seq(1, length(var), 1),
          color = factor(c(rep(1, 2), rep(2, 4), rep(3, 2), rep(4, 4), 
-                   rep(5, 4), rep(6, 2), rep(7, 2), rep(8, 2), rep(9, 4)), 
+                   rep(5, 3), rep(6, 2), rep(7, 2), rep(8, 2), rep(9, 4)), 
                    labels = c("Sex", "Region", "Urbanicity", "Education", 
                               "SES", "Insurance", "Indigenous", "PW employment", 
-                              "Diabetes and HTN"))) |>
+                              "Diabetes and hypertension"))) |>
   ggplot(aes(y = reorder(ordered(interaction(term, color, sep = "!")), desc(orden)), 
              x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
   geom_point(size = 5, shape = "diamond") +

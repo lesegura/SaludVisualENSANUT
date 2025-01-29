@@ -24,11 +24,10 @@ Limpiamos y recodificamos variables
 ```{r}
 ensanut18_4analysis <- ensanut18_all |>
   labelled::remove_labels()  |>
-  mutate(ses = factor(case_when(estrato == 1 ~ 4, 
-                                estrato == 2 ~ 3, 
-                                estrato == 3 ~ 2, 
-                                estrato == 4 ~ 1), 
-                      labels = c("High", "Middle high", "Middle low", "Low")), 
+  mutate(ses = factor(case_when(nsef == 1 ~ 3, 
+                                nsef == 2 ~ 2, 
+                                nsef == 3 ~ 1), 
+                      labels = c("High", "Middle", "Low")), 
          age_cat = factor(ifelse(edad < 40, 1, 
                                  ifelse(edad > 39 & edad < 60, 2, 3)), 
                           labels = c("20 - 39 yo", "40 - 59 yo", "60+ yo")), 
