@@ -45,7 +45,7 @@ ensanut_diseno <- ensanut18_4analysis |>
 adj_estimates_fun <- function(x, y, z){
   
   reference <- ensanut18_4analysis |>
-    pull("!!sym(x)") |> 
+    pull(!!sym(x)) |> 
     levels()
   
   reference <- reference[1]
@@ -109,8 +109,6 @@ tab_estimates <- foreach(i = var_char,
 
 # save(tab_estimates, file = here("data/", "age_adjusted_estimates_v2.RData"))
 
-
-adj_estimates_fun("diab_hbp", "disc_visual_severa_num", "age_cat")
 ```
 
 
