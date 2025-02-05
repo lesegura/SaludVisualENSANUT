@@ -167,11 +167,11 @@ figure_1 <- plot + plot_annotation(caption = "Figure 1. Age-adjusted association
                                    theme = theme(plot.caption = element_text(hjust = 0, size = 10, face = "bold", family = "Times New Roman"),
       plot.margin = margin(5, 20, 20, 5)))
 
-# ggsave(here("results/", "forestplot_age_cat_adj_v2.pdf"), plot = figure_1, 
-#        width = 12, height = 7, device = cairo_pdf, units = "in", dpi = 1800, bg = "transparent")
-# 
-# ggsave(here("results/", "forestplot_age_cat_adj_v2.jpeg"), plot = figure_1, 
-#        width = 12, height = 6, units = "in", dpi = 1800)
+ggsave(here("results/", "forestplot_age_cat_adj_v2.pdf"), plot = figure_1,
+       width = 12, height = 7, device = cairo_pdf, units = "in", dpi = 1800, bg = "transparent")
+
+ggsave(here("results/", "forestplot_age_cat_adj_v2.jpeg"), plot = figure_1,
+       width = 12, height = 6, units = "in", dpi = 1800)
 
 ```
 
