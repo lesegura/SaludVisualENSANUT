@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 options(tinytex.verbose = TRUE, scipen = 999)
 
 mypckgs <- c("tidyverse", "here", "survey", "srvyr", "doParallel", "foreach", 
-             "emmeans")
+             "emmeans", "extrafont", "showtext", "patchwork")
 
 for (package in mypckgs) {
   library(package, character.only = T)
@@ -23,6 +23,11 @@ cl <- makeCluster(no_cores)
 registerDoParallel(cl)
 getDoParWorkers()                   
 getDoParName()
+
+loadfonts(device = "win")
+
+font_add(family = "Times New Roman", regular = "times.ttf")
+showtext_auto()
 
 ```
 
@@ -119,7 +124,7 @@ tab_est_coefs <- map(tab_estimates, "model_estimates") |>
 # write_csv(tab_est_coefs, here("results/", "tab_est_coefs_age_cat_adj.csv"))
 
 ### Figure 1. Sociodemographic predictor of Severe Visual Impairment among the Mexican population.
-tab_est_coefs |>
+plot <- tab_est_coefs |>
   rename(term = contrast) |>
   mutate(term = str_trim(term, side = "both")) |>
   mutate(term = case_when(var == "l_indigena" & term == "No (REF)" ~ "Doesn't speak indigenous language (REF)", 
@@ -149,15 +154,24 @@ tab_est_coefs |>
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
   theme(legend.position = "none", 
-        legend.title = element_blank(), 
-        plot.title = element_text(size = 14), 
-        text = element_text(size = 12)) +
+        plot.caption = element_text(size = 10, family = "Times New Roman", face = "bold", hjust = 0), 
+        plot.title = element_text(size = 10, family = "Times New Roman"), 
+        text = element_text(size = 10, family = "Times New Roman"), 
+        plot.margin = margin(5, 5, 5, 5), 
+        panel.background = element_rect(fill = "transparent", color = NA), 
+        plot.background = element_rect(fill = "transparent", color = NA)) +
   labs(y = "",
-       title = "")
+       title = "") 
 
+figure_1 <- plot + plot_annotation(caption = "Figure 1. Age-adjusted associations between sociodemographic characteristics, diabetes and/or hypertension, and severe vision impairment among Mexican adults. ENSANUT 2018.\nSES: Socioeconomic status. PW: past-week. REF: reference level. yo: years old. HTN: Hypertension.\nPrevalence Ratios are age-adjusted", 
+                                   theme = theme(plot.caption = element_text(hjust = 0, size = 10, face = "bold", family = "Times New Roman"),
+      plot.margin = margin(5, 20, 20, 5)))
 
-# ggsave(here("results/", "forestplot_age_cat_adj_v2.pdf"), width = 12, height = 6, device = "pdf", units = "in", dpi = 1800)
-# ggsave(here("results/", "forestplot_age_cat_adj_v2.jpeg"), width = 12, height = 6, units = "in", dpi = 1800)
+# ggsave(here("results/", "forestplot_age_cat_adj_v2.pdf"), plot = figure_1, 
+#        width = 12, height = 7, device = cairo_pdf, units = "in", dpi = 1800, bg = "transparent")
+# 
+# ggsave(here("results/", "forestplot_age_cat_adj_v2.jpeg"), plot = figure_1, 
+#        width = 12, height = 6, units = "in", dpi = 1800)
 
 ```
 
