@@ -163,15 +163,20 @@ plot <- tab_est_coefs |>
   labs(y = "",
        title = "") 
 
-figure_1 <- plot + plot_annotation(caption = "Figure 1. Age-adjusted associations between sociodemographic characteristics, diabetes and/or hypertension, and severe vision impairment among Mexican adults. ENSANUT 2018.\nSES: Socioeconomic status. PW: past-week. REF: reference level. yo: years old. HTN: Hypertension.\nPrevalence Ratios are age-adjusted", 
-                                   theme = theme(plot.caption = element_text(hjust = 0, size = 10, face = "bold", family = "Times New Roman"),
-      plot.margin = margin(5, 20, 20, 5)))
+### FOrmatting for submission to Lancet Regional Health Americas
+# figure_1 <- plot + plot_annotation(caption = "Figure 1. Age-adjusted associations between sociodemographic characteristics, diabetes and/or hypertension, and severe vision impairment among Mexican adults. ENSANUT 2018.\nSES: Socioeconomic status. PW: past-week. REF: reference level. yo: years old. HTN: Hypertension.\nPrevalence Ratios are age-adjusted", 
+#                                    theme = theme(plot.caption = element_text(hjust = 0, size = 10, face = "bold", family = "Times New Roman"),
+#       plot.margin = margin(5, 20, 20, 5)))
+# 
+# ggsave(here("results/", "forestplot_age_cat_adj_v2.pdf"), plot = figure_1,
+#        width = 12, height = 7, device = cairo_pdf, units = "in", dpi = 1800, bg = "transparent")
+# 
+# ggsave(here("results/", "forestplot_age_cat_adj_v2.jpeg"), plot = figure_1,
+#        width = 12, height = 6, units = "in", dpi = 1800)
 
-ggsave(here("results/", "forestplot_age_cat_adj_v2.pdf"), plot = figure_1,
+### Remove captions and title for submission to Social Science & Medicine
+ggsave(here("results/", "Mohamed_figure_1_ssm.pdf"), plot = plot,
        width = 12, height = 7, device = cairo_pdf, units = "in", dpi = 1800, bg = "transparent")
-
-ggsave(here("results/", "forestplot_age_cat_adj_v2.jpeg"), plot = figure_1,
-       width = 12, height = 6, units = "in", dpi = 1800)
 
 ```
 
