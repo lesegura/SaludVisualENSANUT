@@ -160,6 +160,7 @@ plot <- tab_est_coefs |>
         plot.margin = margin(5, 5, 5, 5), 
         panel.background = element_rect(fill = "transparent", color = NA), 
         plot.background = element_rect(fill = "transparent", color = NA)) +
+  ggthemes::scale_color_tableau(palette = "Color Blind") +  # Apply color-blind palette
   labs(y = "",
        title = "") 
 
